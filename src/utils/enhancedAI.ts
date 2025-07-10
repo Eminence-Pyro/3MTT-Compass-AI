@@ -1,5 +1,5 @@
-
-import { User, LearningModule, AssessmentResult } from '../types';
+import { User, LearningModule } from '../types';
+import { AssessmentResult } from './aiRecommendations';
 import { EnhancedUser } from '../types/enhanced';
 
 export interface LearningStyle {

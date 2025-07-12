@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,10 +15,13 @@ import {
   TrendingUp,
   LogOut,
   Lightbulb,
-  BarChart3
+  BarChart3,
+  Award
 } from 'lucide-react';
 import { User, LearningModule } from '../types';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import AchievementProgress from './AchievementProgress';
+import AchievementBadge from './AchievementBadge';
 
 interface LearningDashboardProps {
   user: User;
@@ -54,6 +56,11 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
     module => !user.completedModules.includes(module.id)
   );
 
+  // Achievement stats
+  const userAchievements = user.achievements || [];
+  const totalPoints = user.totalPoints || 0;
+  const recentAchievements = userAchievements.slice(-3); // Show last 3 achievements
+
   const handleModuleClick = (module: LearningModule) => {
     setSelectedModule(module);
   };
@@ -81,20 +88,33 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
                 <p className="text-sm text-gray-600">Welcome back, {user.name}!</p>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout} className="text-gray-600">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* Achievement Summary */}
+              {totalPoints > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-yellow-100 rounded-full">
+                  <Trophy className="w-4 h-4 text-yellow-600" />
+                  <span className="text-sm font-medium text-yellow-700">{totalPoints} pts</span>
+                </div>
+              )}
+              <Button variant="outline" onClick={onLogout} className="text-gray-600">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Tabs defaultValue="learning" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 bg-white">
+          <TabsList className="grid w-full grid-cols-3 bg-white">
             <TabsTrigger value="learning" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Learning Path
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="flex items-center gap-2">
+              <Award className="w-4 h-4" />
+              Achievements
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -137,10 +157,39 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
                           <TrendingUp className="w-4 h-4 text-green-500" />
                           {user.skillLevel} level
                         </div>
+                        {totalPoints > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Award className="w-4 h-4 text-yellow-500" />
+                            {totalPoints} points
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Recent Achievements */}
+                {recentAchievements.length > 0 && (
+                  <Card className="border-yellow-200 bg-yellow-50">
+                    <CardHeader>
+                      <CardTitle className="text-yellow-700 flex items-center gap-2">
+                        <Award className="w-5 h-5" />
+                        Recent Achievements
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2 flex-wrap">
+                        {recentAchievements.map((achievement) => (
+                          <AchievementBadge
+                            key={achievement.id}
+                            achievement={achievement}
+                            size="sm"
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Current Module */}
                 {currentModule && (
@@ -306,6 +355,12 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
                       <span className="text-gray-600">Track Progress</span>
                       <span className="font-semibold text-orange-600">{Math.round(progressPercentage)}%</span>
                     </div>
+                    {totalPoints > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Achievement Points</span>
+                        <span className="font-semibold text-yellow-600">{totalPoints}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -331,6 +386,10 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="achievements">
+            <AchievementProgress user={user} />
           </TabsContent>
 
           <TabsContent value="analytics">

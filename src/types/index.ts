@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -8,6 +7,8 @@ export interface User {
   skillLevel: 'beginner' | 'intermediate' | 'advanced';
   completedModules: string[];
   currentPath: LearningPath | null;
+  achievements?: Achievement[];
+  totalPoints?: number;
 }
 
 export interface Assessment {
@@ -54,4 +55,15 @@ export interface TrackOption {
   name: string;
   description: string;
   icon: string;
+}
+
+export interface Achievement {
+  id: string;
+  type: 'completion' | 'streak' | 'level-up' | 'milestone' | 'speed' | 'consistency';
+  title: string;
+  description: string;
+  icon: string;
+  points: number;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  unlockedAt: string;
 }

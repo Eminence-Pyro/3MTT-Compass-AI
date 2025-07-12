@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { assessments } from '../data/assessments';
@@ -6,17 +5,20 @@ import { analyzeAssessment, generatePersonalizedPath, adaptLearningPath } from '
 import { tracks } from '../data/tracks';
 import { LearningPath } from '../types';
 import { toast } from 'sonner';
+import { checkForNewAchievements, Achievement } from '../utils/achievementEngine';
 
 import AuthForm from '../components/AuthForm';
 import TrackSelection from '../components/TrackSelection';
 import Assessment from '../components/Assessment';
 import LearningDashboard from '../components/LearningDashboard';
+import AchievementNotification from '../components/AchievementNotification';
 
 type AppState = 'auth' | 'track-selection' | 'assessment' | 'dashboard';
 
 const Index = () => {
   const { user, loading, login, logout, updateUser } = useAuth();
   const [appState, setAppState] = useState<AppState>('auth');
+  const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
 
   React.useEffect(() => {
     if (!loading && user) {
@@ -72,11 +74,26 @@ const Index = () => {
     };
 
     // Update user with assessment results and learning path
-    updateUser({
+    const updatedUser = {
       assessmentCompleted: true,
       skillLevel: result.skillLevel,
-      currentPath: learningPath
-    });
+      currentPath: learningPath,
+      achievements: user.achievements || [],
+      totalPoints: user.totalPoints || 0
+    };
+
+    updateUser(updatedUser);
+
+    // Check for achievements
+    const achievements = checkForNewAchievements({ ...user, ...updatedUser }, user.completedModules);
+    if (achievements.length > 0) {
+      const userAchievements = [...(user.achievements || []), ...achievements];
+      updateUser({ 
+        achievements: userAchievements,
+        totalPoints: userAchievements.reduce((total, a) => total + a.points, 0)
+      });
+      setNewAchievements(achievements);
+    }
 
     toast.success(`Personalized learning path generated! You're at ${result.skillLevel} level.`);
     setAppState('dashboard');
@@ -85,8 +102,23 @@ const Index = () => {
   const handleModuleComplete = (moduleId: string) => {
     if (!user) return;
     
+    const previousCompletedModules = [...user.completedModules];
     const updatedCompletedModules = [...user.completedModules, moduleId];
-    updateUser({ completedModules: updatedCompletedModules });
+    
+    // Check for new achievements
+    const tempUser = { ...user, completedModules: updatedCompletedModules };
+    const achievements = checkForNewAchievements(tempUser, previousCompletedModules);
+    
+    const updatedUser: any = { completedModules: updatedCompletedModules };
+    
+    if (achievements.length > 0) {
+      const userAchievements = [...(user.achievements || []), ...achievements];
+      updatedUser.achievements = userAchievements;
+      updatedUser.totalPoints = userAchievements.reduce((total, a) => total + a.points, 0);
+      setNewAchievements(achievements);
+    }
+    
+    updateUser(updatedUser);
     
     const module = user.currentPath?.modules.find(m => m.id === moduleId);
     toast.success(`Module "${module?.title}" completed! 🎉`);
@@ -121,6 +153,10 @@ const Index = () => {
     logout();
     setAppState('auth');
     toast.success('Logged out successfully');
+  };
+
+  const closeAchievementNotification = () => {
+    setNewAchievements([]);
   };
 
   if (loading) {
@@ -169,6 +205,54 @@ const Index = () => {
     default:
       return null;
   }
+
+  return (
+    <>
+      {/* Main App Content */}
+      {(() => {
+        switch (appState) {
+          case 'auth':
+            return <AuthForm onLogin={handleLogin} />;
+          case 'track-selection':
+            return <TrackSelection onSelectTrack={handleTrackSelection} />;
+          case 'assessment':
+            const assessment = assessments.find(a => a.track === user?.track);
+            if (!assessment) {
+              return (
+                <div className="min-h-screen flex items-center justify-center">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Assessment Not Found</h2>
+                    <p className="text-gray-600">No assessment available for the selected track.</p>
+                  </div>
+                </div>
+              );
+            }
+            return <Assessment assessment={assessment} onComplete={handleAssessmentComplete} />;
+          case 'dashboard':
+            if (!user) return null;
+            return (
+              <LearningDashboard
+                user={user}
+                onModuleComplete={handleModuleComplete}
+                onLogout={handleLogout}
+                onAdaptPath={handleAdaptPath}
+              />
+            );
+          default:
+            return null;
+        }
+      })()}
+      
+      {/* Achievement Notifications */}
+      {newAchievements.length > 0 && user && (
+        <AchievementNotification
+          achievements={newAchievements}
+          user={user}
+          onClose={closeAchievementNotification}
+        />
+      )}
+    </>
+  );
 };
 
 export default Index;

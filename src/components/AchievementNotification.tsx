@@ -3,10 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Share2 } from 'lucide-react';
-import { Achievement } from '../utils/achievementEngine';
+import { Achievement, User } from '../types';
 import AchievementBadge from './AchievementBadge';
 import SocialShare from './SocialShare';
-import { User } from '../types';
 
 interface AchievementNotificationProps {
   achievements: Achievement[];

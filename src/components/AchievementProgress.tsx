@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Lock, CheckCircle2 } from 'lucide-react';
-import { User } from '../types';
-import { achievements, Achievement, calculateTotalPoints } from '../utils/achievementEngine';
+import { User, Achievement } from '../types';
+import { achievementTemplates, calculateTotalPoints } from '../utils/achievementEngine';
 import AchievementBadge from './AchievementBadge';
 
 interface AchievementProgressProps {
@@ -16,14 +16,14 @@ const AchievementProgress: React.FC<AchievementProgressProps> = ({ user }) => {
   const userAchievements = user.achievements || [];
   const unlockedIds = userAchievements.map(a => a.id);
   const totalPoints = calculateTotalPoints(userAchievements);
-  const progressPercentage = (userAchievements.length / achievements.length) * 100;
+  const progressPercentage = (userAchievements.length / achievementTemplates.length) * 100;
 
-  const unlockedAchievements = achievements.filter(a => unlockedIds.includes(a.id));
-  const lockedAchievements = achievements.filter(a => !unlockedIds.includes(a.id));
-  const nextAchievements = lockedAchievements.filter(a => {
+  const unlockedAchievements = userAchievements;
+  const lockedTemplates = achievementTemplates.filter(template => !unlockedIds.includes(template.id));
+  const nextGoals = lockedTemplates.filter(template => {
     // Show achievements that are close to being unlocked
-    if (a.type === 'completion') {
-      return user.completedModules.length >= (a.condition.toString().match(/\d+/)?.[0] ? parseInt(a.condition.toString().match(/\d+/)[0]) - 2 : 0);
+    if (template.type === 'completion') {
+      return user.completedModules.length >= (template.condition.toString().match(/\d+/)?.[0] ? parseInt(template.condition.toString().match(/\d+/)[0]) - 2 : 0);
     }
     return true;
   }).slice(0, 3);
@@ -81,7 +81,7 @@ const AchievementProgress: React.FC<AchievementProgressProps> = ({ user }) => {
       )}
 
       {/* Next Goals */}
-      {nextAchievements.length > 0 && (
+      {nextGoals.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -91,20 +91,20 @@ const AchievementProgress: React.FC<AchievementProgressProps> = ({ user }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {nextAchievements.map((achievement) => (
+              {nextGoals.map((template) => (
                 <div
-                  key={achievement.id}
+                  key={template.id}
                   className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50"
                 >
                   <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                     <Lock className="w-5 h-5 text-gray-500" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-700">{achievement.title}</div>
-                    <div className="text-sm text-gray-600">{achievement.description}</div>
+                    <div className="font-medium text-gray-700">{template.title}</div>
+                    <div className="text-sm text-gray-600">{template.description}</div>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {achievement.points} pts
+                    {template.points} pts
                   </Badge>
                 </div>
               ))}

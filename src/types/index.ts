@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -66,4 +67,16 @@ export interface Achievement {
   points: number;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   unlockedAt: string;
+  condition?: (user: User) => boolean;
+}
+
+export interface AchievementTemplate {
+  id: string;
+  type: 'completion' | 'streak' | 'level-up' | 'milestone' | 'speed' | 'consistency';
+  title: string;
+  description: string;
+  icon: string;
+  condition: (user: User) => boolean;
+  points: number;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }

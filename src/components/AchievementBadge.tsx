@@ -3,7 +3,8 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Play, Target, Flame, Zap, TrendingUp, Crown, Activity, Star } from 'lucide-react';
-import { Achievement, getRarityColor } from '../utils/achievementEngine';
+import { Achievement } from '../types';
+import { getRarityColor } from '../utils/achievementEngine';
 
 interface AchievementBadgeProps {
   achievement: Achievement;

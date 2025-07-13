@@ -1,19 +1,7 @@
 
-import { User, LearningModule } from '../types';
+import { User, Achievement, AchievementTemplate } from '../types';
 
-export interface Achievement {
-  id: string;
-  type: 'completion' | 'streak' | 'level-up' | 'milestone' | 'speed' | 'consistency';
-  title: string;
-  description: string;
-  icon: string;
-  condition: (user: User) => boolean;
-  points: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  unlockedAt?: string;
-}
-
-export const achievements: Achievement[] = [
+export const achievementTemplates: AchievementTemplate[] = [
   // Completion Achievements
   {
     id: 'first_module',
@@ -132,14 +120,20 @@ export const checkForNewAchievements = (user: User, previousCompletedModules: st
   const userAchievements = user.achievements || [];
   const unlockedAchievementIds = userAchievements.map(a => a.id);
   
-  return achievements.filter(achievement => {
+  return achievementTemplates.filter(template => {
     // Skip if already unlocked
-    if (unlockedAchievementIds.includes(achievement.id)) return false;
+    if (unlockedAchievementIds.includes(template.id)) return false;
     
     // Check if condition is now met
-    return achievement.condition(user);
-  }).map(achievement => ({
-    ...achievement,
+    return template.condition(user);
+  }).map(template => ({
+    id: template.id,
+    type: template.type,
+    title: template.title,
+    description: template.description,
+    icon: template.icon,
+    points: template.points,
+    rarity: template.rarity,
     unlockedAt: new Date().toISOString()
   }));
 };

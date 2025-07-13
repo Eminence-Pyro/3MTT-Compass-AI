@@ -45,6 +45,13 @@ const AchievementNotification: React.FC<AchievementNotificationProps> = ({
 
   const currentAchievement = achievements[currentIndex];
 
+  // Create a compatible achievement object for SocialShare
+  const shareableAchievement = {
+    type: currentAchievement.type as 'completion' | 'streak' | 'level-up' | 'milestone',
+    title: currentAchievement.title,
+    description: currentAchievement.description
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="max-w-md w-full bg-gradient-to-br from-green-50 to-orange-50 border-2 border-green-200 shadow-xl">
@@ -116,11 +123,7 @@ const AchievementNotification: React.FC<AchievementNotificationProps> = ({
             </div>
             <SocialShare
               user={user}
-              achievement={{
-                type: currentAchievement.type,
-                title: currentAchievement.title,
-                description: currentAchievement.description
-              }}
+              achievement={shareableAchievement}
             />
           </div>
         )}

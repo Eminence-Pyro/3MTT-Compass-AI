@@ -1,4 +1,3 @@
-
 import { User, Achievement, AchievementTemplate } from '../types';
 
 export const achievementTemplates: AchievementTemplate[] = [

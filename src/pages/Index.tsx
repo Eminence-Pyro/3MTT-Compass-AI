@@ -3,9 +3,9 @@ import { useAuth } from '../hooks/useAuth';
 import { assessments } from '../data/assessments';
 import { analyzeAssessment, generatePersonalizedPath, adaptLearningPath } from '../utils/aiRecommendations';
 import { tracks } from '../data/tracks';
-import { LearningPath } from '../types';
+import { LearningPath, Achievement } from '../types';
 import { toast } from 'sonner';
-import { checkForNewAchievements, Achievement } from '../utils/achievementEngine';
+import { checkForNewAchievements } from '../utils/achievementEngine';
 
 import AuthForm from '../components/AuthForm';
 import TrackSelection from '../components/TrackSelection';
@@ -194,65 +194,28 @@ const Index = () => {
     case 'dashboard':
       if (!user) return null;
       return (
-        <LearningDashboard 
-          user={user}
-          onModuleComplete={handleModuleComplete}
-          onLogout={handleLogout}
-          onAdaptPath={handleAdaptPath}
-        />
+        <>
+          <LearningDashboard 
+            user={user}
+            onModuleComplete={handleModuleComplete}
+            onLogout={handleLogout}
+            onAdaptPath={handleAdaptPath}
+          />
+          
+          {/* Achievement Notifications */}
+          {newAchievements.length > 0 && (
+            <AchievementNotification
+              achievements={newAchievements}
+              user={user}
+              onClose={closeAchievementNotification}
+            />
+          )}
+        </>
       );
     
     default:
       return null;
   }
-
-  return (
-    <>
-      {/* Main App Content */}
-      {(() => {
-        switch (appState) {
-          case 'auth':
-            return <AuthForm onLogin={handleLogin} />;
-          case 'track-selection':
-            return <TrackSelection onSelectTrack={handleTrackSelection} />;
-          case 'assessment':
-            const assessment = assessments.find(a => a.track === user?.track);
-            if (!assessment) {
-              return (
-                <div className="min-h-screen flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold text-red-600 mb-4">Assessment Not Found</h2>
-                    <p className="text-gray-600">No assessment available for the selected track.</p>
-                  </div>
-                </div>
-              );
-            }
-            return <Assessment assessment={assessment} onComplete={handleAssessmentComplete} />;
-          case 'dashboard':
-            if (!user) return null;
-            return (
-              <LearningDashboard
-                user={user}
-                onModuleComplete={handleModuleComplete}
-                onLogout={handleLogout}
-                onAdaptPath={handleAdaptPath}
-              />
-            );
-          default:
-            return null;
-        }
-      })()}
-      
-      {/* Achievement Notifications */}
-      {newAchievements.length > 0 && user && (
-        <AchievementNotification
-          achievements={newAchievements}
-          user={user}
-          onClose={closeAchievementNotification}
-        />
-      )}
-    </>
-  );
 };
 
 export default Index;

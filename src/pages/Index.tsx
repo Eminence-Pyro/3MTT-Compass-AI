@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { assessments } from '../data/assessments';
@@ -39,17 +40,17 @@ const Index = () => {
     toast.success('Welcome to 3MTT Compass AI!');
   };
 
-  const handleTrackSelection = (trackId: string) => {
+  const handleTrackSelection = async (trackId: string) => {
     console.log('Track selected:', trackId);
     const selectedTrack = tracks.find(t => t.id === trackId);
-    updateUser({ 
+    await updateUser({ 
       track: trackId,
     });
     toast.success(`${selectedTrack?.name} track selected!`);
     setAppState('assessment');
   };
 
-  const handleAssessmentComplete = (answers: number[]) => {
+  const handleAssessmentComplete = async (answers: number[]) => {
     console.log('Assessment completed with answers:', answers);
     
     const assessment = assessments.find(a => a.track === user?.track);
@@ -82,13 +83,13 @@ const Index = () => {
       totalPoints: user.totalPoints || 0
     };
 
-    updateUser(updatedUser);
+    await updateUser(updatedUser);
 
     // Check for achievements
     const achievements = checkForNewAchievements({ ...user, ...updatedUser }, user.completedModules);
     if (achievements.length > 0) {
       const userAchievements = [...(user.achievements || []), ...achievements];
-      updateUser({ 
+      await updateUser({ 
         achievements: userAchievements,
         totalPoints: userAchievements.reduce((total, a) => total + a.points, 0)
       });
@@ -99,7 +100,7 @@ const Index = () => {
     setAppState('dashboard');
   };
 
-  const handleModuleComplete = (moduleId: string) => {
+  const handleModuleComplete = async (moduleId: string) => {
     if (!user) return;
     
     const previousCompletedModules = [...user.completedModules];
@@ -118,7 +119,7 @@ const Index = () => {
       setNewAchievements(achievements);
     }
     
-    updateUser(updatedUser);
+    await updateUser(updatedUser);
     
     const module = user.currentPath?.modules.find(m => m.id === moduleId);
     toast.success(`Module "${module?.title}" completed! 🎉`);
@@ -126,7 +127,7 @@ const Index = () => {
     console.log('Module completed:', moduleId);
   };
 
-  const handleAdaptPath = () => {
+  const handleAdaptPath = async () => {
     if (!user || !user.currentPath) return;
 
     console.log('Adapting learning path...');
@@ -145,12 +146,12 @@ const Index = () => {
       ]
     };
 
-    updateUser({ currentPath: updatedPath });
+    await updateUser({ currentPath: updatedPath });
     toast.success('Learning path adapted based on your progress!');
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setAppState('auth');
     toast.success('Logged out successfully');
   };

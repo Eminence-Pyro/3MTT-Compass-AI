@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      learning_paths: {
+        Row: {
+          adaptation_history: string[] | null
+          created_at: string | null
+          id: string
+          modules: Json
+          progress: number | null
+          track: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          adaptation_history?: string[] | null
+          created_at?: string | null
+          id?: string
+          modules?: Json
+          progress?: number | null
+          track: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          adaptation_history?: string[] | null
+          created_at?: string | null
+          id?: string
+          modules?: Json
+          progress?: number | null
+          track?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          achievements: Json | null
+          assessment_completed: boolean | null
+          completed_modules: string[] | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          skill_level: string | null
+          total_points: number | null
+          track: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          achievements?: Json | null
+          assessment_completed?: boolean | null
+          completed_modules?: string[] | null
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          skill_level?: string | null
+          total_points?: number | null
+          track?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          achievements?: Json | null
+          assessment_completed?: boolean | null
+          completed_modules?: string[] | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          skill_level?: string | null
+          total_points?: number | null
+          track?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

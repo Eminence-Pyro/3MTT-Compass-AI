@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { User as AppUser } from '../types';
+import { User as AppUser, Achievement, LearningModule } from '../types';
 
 export function useAuth() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -39,13 +39,13 @@ export function useAuth() {
               assessmentCompleted: profile.assessment_completed,
               skillLevel: profile.skill_level as 'beginner' | 'intermediate' | 'advanced',
               completedModules: profile.completed_modules || [],
-              achievements: profile.achievements || [],
+              achievements: (profile.achievements as unknown as Achievement[]) || [],
               totalPoints: profile.total_points || 0,
               currentPath: learningPath ? {
                 id: learningPath.id,
                 userId: learningPath.user_id,
                 track: learningPath.track,
-                modules: learningPath.modules,
+                modules: (learningPath.modules as unknown as LearningModule[]) || [],
                 progress: learningPath.progress,
                 adaptationHistory: learningPath.adaptation_history || [],
                 createdAt: learningPath.created_at
@@ -125,7 +125,7 @@ export function useAuth() {
       assessment_completed: updates.assessmentCompleted,
       skill_level: updates.skillLevel,
       completed_modules: updates.completedModules,
-      achievements: updates.achievements,
+      achievements: updates.achievements ? JSON.parse(JSON.stringify(updates.achievements)) : undefined,
       total_points: updates.totalPoints,
       updated_at: new Date().toISOString()
     };
@@ -144,7 +144,7 @@ export function useAuth() {
     if (updates.currentPath) {
       const learningPathData = {
         track: updates.currentPath.track,
-        modules: updates.currentPath.modules,
+        modules: JSON.parse(JSON.stringify(updates.currentPath.modules)),
         progress: updates.currentPath.progress,
         adaptation_history: updates.currentPath.adaptationHistory,
         updated_at: new Date().toISOString()

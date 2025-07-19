@@ -77,12 +77,6 @@
 - **React Query** for efficient data fetching and caching
 - **React Router** for client-side routing
 
-## Live Demo
-## Live Demo
-
-👉 [https://compass-ai-pathfinder.vercel.app](https://compass-ai-pathfinder.vercel.app/)
-
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -241,8 +235,16 @@
 
 ## 🌐 Deployment
 
-Deployed on [Vercel](https://vercel.com)
+### Quick Deployment
+1. Open [Lovable](https://lovable.dev/projects/3f2327bf-f54e-4f10-93ed-3c39670fc115)
+2. Click on **Share → Publish**
+3. Your application will be deployed automatically
 
+### Custom Domain
+1. Navigate to **Project > Settings > Domains**
+2. Click **Connect Domain**
+3. Follow the setup instructions
+4. [Learn more about custom domains](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
 
 ## 🔧 Development
 
@@ -301,6 +303,6 @@ For support, questions, or feedback:
 
 ---
 
-**Made with ❤️ by Divine Nnata for Nigerian tech talents and the global learning community**
+**Made with ❤️ for Nigerian tech talents and the global learning community**
 
 *Empowering the next generation of technical talent through AI-powered personalized learning*

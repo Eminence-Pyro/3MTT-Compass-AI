@@ -106,12 +106,11 @@ const Footer = () => {
         {/* Bottom Section */}
         <div className="mt-8 pt-6 border-t border-border flex flex-col sm:flex-row justify-between items-center">
           <p className="text-muted-foreground text-sm">
-            © 2025 3MTT Compass AI. Part of the 3 Million Technical Talent initiative.
+            © 2024 3MTT Compass AI. Part of the 3 Million Technical Talent initiative.
           </p>
           <div className="flex items-center space-x-1 text-muted-foreground text-sm mt-2 sm:mt-0">
             <span>Made with</span>
             <Heart className="w-4 h-4 text-red-500 fill-current" />
-            <span>by Divine Nnata</span>
             <span>for Nigerian tech talents</span>
           </div>
         </div>

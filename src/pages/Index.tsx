@@ -13,6 +13,7 @@ import TrackSelection from '../components/TrackSelection';
 import Assessment from '../components/Assessment';
 import LearningDashboard from '../components/LearningDashboard';
 import AchievementNotification from '../components/AchievementNotification';
+import Footer from '../components/Footer';
 
 type AppState = 'auth' | 'track-selection' | 'assessment' | 'dashboard';
 
@@ -173,35 +174,61 @@ const Index = () => {
 
   switch (appState) {
     case 'auth':
-      return <AuthForm onLogin={handleLogin} />;
+      return (
+        <div className="min-h-screen flex flex-col">
+          <div className="flex-1">
+            <AuthForm onLogin={handleLogin} />
+          </div>
+          <Footer />
+        </div>
+      );
     
     case 'track-selection':
-      return <TrackSelection onSelectTrack={handleTrackSelection} />;
+      return (
+        <div className="min-h-screen flex flex-col">
+          <div className="flex-1">
+            <TrackSelection onSelectTrack={handleTrackSelection} />
+          </div>
+          <Footer />
+        </div>
+      );
     
     case 'assessment':
       const assessment = assessments.find(a => a.track === user?.track);
       if (!assessment) {
         return (
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-red-600 mb-4">Assessment Not Found</h2>
-              <p className="text-gray-600">No assessment available for the selected track.</p>
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-red-600 mb-4">Assessment Not Found</h2>
+                <p className="text-gray-600">No assessment available for the selected track.</p>
+              </div>
             </div>
+            <Footer />
           </div>
         );
       }
-      return <Assessment assessment={assessment} onComplete={handleAssessmentComplete} />;
+      return (
+        <div className="min-h-screen flex flex-col">
+          <div className="flex-1">
+            <Assessment assessment={assessment} onComplete={handleAssessmentComplete} />
+          </div>
+          <Footer />
+        </div>
+      );
     
     case 'dashboard':
       if (!user) return null;
       return (
-        <>
-          <LearningDashboard 
-            user={user}
-            onModuleComplete={handleModuleComplete}
-            onLogout={handleLogout}
-            onAdaptPath={handleAdaptPath}
-          />
+        <div className="min-h-screen flex flex-col">
+          <div className="flex-1">
+            <LearningDashboard 
+              user={user}
+              onModuleComplete={handleModuleComplete}
+              onLogout={handleLogout}
+              onAdaptPath={handleAdaptPath}
+            />
+          </div>
           
           {/* Achievement Notifications */}
           {newAchievements.length > 0 && (
@@ -211,7 +238,8 @@ const Index = () => {
               onClose={closeAchievementNotification}
             />
           )}
-        </>
+          <Footer />
+        </div>
       );
     
     default:

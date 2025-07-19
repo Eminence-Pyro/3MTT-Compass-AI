@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Loader2, UserCheck, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthFormProps {
   onLogin: (email: string, password: string, name: string) => Promise<void>;
@@ -17,6 +17,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +25,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       await onLogin(email, password, name);
+      // Redirect after successful login
+      navigate('/dashboard'); // Change '/dashboard' to your desired route
     } catch (error: any) {
       console.error('Authentication error:', error);
       setError(error.message || 'An error occurred during authentication');

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   BookOpen, 
   ExternalLink, 
@@ -16,12 +16,27 @@ import {
   LogOut,
   Lightbulb,
   BarChart3,
-  Award
+  Award,
+  MessageCircle,
+  Search,
+  Brain,
+  FileText,
+  PenTool,
+  Eye,
+  Zap
 } from 'lucide-react';
 import { User, LearningModule } from '../types';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import AchievementProgress from './AchievementProgress';
 import AchievementBadge from './AchievementBadge';
+import ConversationalAI from './ai/ConversationalAI';
+import SmartRecommendations from './ai/SmartRecommendations';
+import SemanticSearch from './ai/SemanticSearch';
+import AutomatedInsights from './ai/AutomatedInsights';
+import DocumentIntelligence from './ai/DocumentIntelligence';
+import ContentGenerator from './ai/ContentGenerator';
+import PredictiveAnalytics from './ai/PredictiveAnalytics';
+import AccessibilityFeatures from './ai/AccessibilityFeatures';
 
 interface LearningDashboardProps {
   user: User;
@@ -37,6 +52,8 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
   onAdaptPath 
 }) => {
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
+  const [showAI, setShowAI] = useState(false);
+  const [aiInsightsRefresh, setAiInsightsRefresh] = useState(0);
 
   if (!user.currentPath) {
     return (
@@ -96,6 +113,15 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
                   <span className="text-sm font-medium text-yellow-700">{totalPoints} pts</span>
                 </div>
               )}
+              {/* AI Assistant Toggle */}
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAI(!showAI)}
+                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+              >
+                <Brain className="w-4 h-4 mr-2" />
+                AI Features
+              </Button>
               <Button variant="outline" onClick={onLogout} className="text-gray-600">
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -107,7 +133,7 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Tabs defaultValue="learning" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white">
+          <TabsList className="grid w-full grid-cols-4 bg-white">
             <TabsTrigger value="learning" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Learning Path
@@ -120,12 +146,26 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
               <BarChart3 className="w-4 h-4" />
               Analytics
             </TabsTrigger>
+            <TabsTrigger value="ai-features" className="flex items-center gap-2">
+              <Brain className="w-4 h-4" />
+              AI Features
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="learning" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-6">
+                {/* AI Search Bar */}
+                <Card>
+                  <CardContent className="p-4">
+                    <SemanticSearch 
+                      placeholder="Ask me anything or search for learning resources..."
+                      onResultClick={(result) => console.log('Search result clicked:', result)}
+                    />
+                  </CardContent>
+                </Card>
+
                 {/* Progress Overview */}
                 <Card>
                   <CardHeader>
@@ -337,6 +377,12 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
 
               {/* Sidebar */}
               <div className="space-y-6">
+                {/* Smart Recommendations */}
+                <SmartRecommendations 
+                  user={user}
+                  onRecommendationClick={(rec) => console.log('Recommendation clicked:', rec)}
+                />
+
                 {/* Stats */}
                 <Card>
                   <CardHeader>
@@ -395,8 +441,81 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
           <TabsContent value="analytics">
             <AnalyticsDashboard user={user} />
           </TabsContent>
+
+          <TabsContent value="ai-features">
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-green-700 mb-2">AI-Powered Features</h2>
+                <p className="text-gray-600">Enhance your learning experience with intelligent tools</p>
+              </div>
+
+              <Tabs defaultValue="insights" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+                  <TabsTrigger value="insights" className="flex items-center gap-1 text-xs">
+                    <Brain className="w-3 h-3" />
+                    Insights
+                  </TabsTrigger>
+                  <TabsTrigger value="predictions" className="flex items-center gap-1 text-xs">
+                    <TrendingUp className="w-3 h-3" />
+                    Predictions
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="flex items-center gap-1 text-xs">
+                    <FileText className="w-3 h-3" />
+                    Documents
+                  </TabsTrigger>
+                  <TabsTrigger value="content" className="flex items-center gap-1 text-xs">
+                    <PenTool className="w-3 h-3" />
+                    Generator
+                  </TabsTrigger>
+                  <TabsTrigger value="accessibility" className="flex items-center gap-1 text-xs">
+                    <Eye className="w-3 h-3" />
+                    Accessibility
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="insights">
+                  <AutomatedInsights user={user} refreshTrigger={aiInsightsRefresh} />
+                </TabsContent>
+
+                <TabsContent value="predictions">
+                  <PredictiveAnalytics user={user} />
+                </TabsContent>
+
+                <TabsContent value="documents">
+                  <DocumentIntelligence 
+                    onAnalysisComplete={(analysis) => {
+                      console.log('Document analyzed:', analysis);
+                      setAiInsightsRefresh(prev => prev + 1);
+                    }}
+                  />
+                </TabsContent>
+
+                <TabsContent value="content">
+                  <ContentGenerator 
+                    userContext={{
+                      track: user.track,
+                      skillLevel: user.skillLevel,
+                      completedModules: user.completedModules.length
+                    }}
+                  />
+                </TabsContent>
+
+                <TabsContent value="accessibility">
+                  <AccessibilityFeatures />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Conversational AI */}
+      <ConversationalAI
+        user={user}
+        isOpen={showAI}
+        onToggle={() => setShowAI(!showAI)}
+        onClose={() => setShowAI(false)}
+      />
     </div>
   );
 };

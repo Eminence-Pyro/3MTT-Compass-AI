@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Send, Bot, User, Minimize2, Maximize2, X } from 'lucide-react';
 import { AIMessage, ChatSession } from '../../types/ai';
 import { aiService } from '../../services/aiService';
-import { User as AppUser } from '../../types';
+import { User as AppUser } from '../../types/index';
 
 interface ConversationalAIProps {
   user: AppUser;

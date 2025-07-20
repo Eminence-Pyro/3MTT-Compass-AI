@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Brain, CheckCircle, Clock } from 'lucide-react';
-import { Assessment as AssessmentType, Question } from '../types';
+import { Assessment as AssessmentType, Question } from '../types/index';
 
 interface AssessmentProps {
   assessment: AssessmentType;

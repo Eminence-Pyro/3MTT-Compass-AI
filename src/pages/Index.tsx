@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { assessments } from '../data/assessments';
 import { analyzeAssessment, generatePersonalizedPath, adaptLearningPath } from '../utils/aiRecommendations';
 import { tracks } from '../data/tracks';
-import { LearningPath, Achievement } from '../types';
+import { LearningPath, Achievement } from '../types/index';
 import { toast } from 'sonner';
 import { checkForNewAchievements } from '../utils/achievementEngine';
 

@@ -1,5 +1,5 @@
 
-import { User, LearningModule } from '../types';
+import { User, LearningModule } from '../types/index';
 import { UserAnalytics, ModuleAnalytics } from '../types/analytics';
 
 export const calculateUserAnalytics = (user: User): UserAnalytics => {

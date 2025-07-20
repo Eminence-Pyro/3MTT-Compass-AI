@@ -1,4 +1,4 @@
-import { User, Achievement, AchievementTemplate } from '../types';
+import { User, Achievement, AchievementTemplate } from '../types/index';
 
 export const achievementTemplates: AchievementTemplate[] = [
   // Completion Achievements

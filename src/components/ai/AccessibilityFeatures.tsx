@@ -33,13 +33,13 @@ const AccessibilityFeatures: React.FC<AccessibilityFeaturesProps> = ({ onFeature
 
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
-  const [synthesis, setSynthesis] = useState<SpeechSynthesis | null>(null);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [synthesis, setSynthesis] = useState<any>(null);
 
   useEffect(() => {
     // Initialize speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
       recognitionInstance.continuous = true;
       recognitionInstance.interimResults = true;
@@ -47,7 +47,7 @@ const AccessibilityFeatures: React.FC<AccessibilityFeaturesProps> = ({ onFeature
     }
 
     // Initialize speech synthesis
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       setSynthesis(window.speechSynthesis);
     }
   }, []);

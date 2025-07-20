@@ -1,5 +1,5 @@
 
-import { LearningModule } from '../types';
+import { LearningModule } from '../types/index';
 
 export const learningModules: LearningModule[] = [
   // Software Development (Full Stack)

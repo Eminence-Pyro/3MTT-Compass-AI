@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Share2 } from 'lucide-react';
-import { Achievement, User } from '../types';
+import { Achievement, User } from '../types/index';
 import AchievementBadge from './AchievementBadge';
 import SocialShare from './SocialShare';
 

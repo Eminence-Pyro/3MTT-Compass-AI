@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Lock, CheckCircle2 } from 'lucide-react';
-import { User, Achievement } from '../types';
+import { User, Achievement } from '../types/index';
 import { achievementTemplates, calculateTotalPoints } from '../utils/achievementEngine';
 import AchievementBadge from './AchievementBadge';
 

@@ -1,5 +1,5 @@
 
-import { Question } from '../types';
+import { Question } from '../types/index';
 import { AssessmentResult } from '../types/assessment';
 
 export function analyzeAssessment(

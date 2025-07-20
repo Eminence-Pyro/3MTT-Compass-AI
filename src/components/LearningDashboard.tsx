@@ -25,7 +25,7 @@ import {
   Eye,
   Zap
 } from 'lucide-react';
-import { User, LearningModule } from '../types';
+import { User, LearningModule } from '../types/index';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import AchievementProgress from './AchievementProgress';
 import AchievementBadge from './AchievementBadge';
@@ -161,7 +161,7 @@ const LearningDashboard: React.FC<LearningDashboardProps> = ({
                   <CardContent className="p-4">
                     <SemanticSearch 
                       placeholder="Ask me anything or search for learning resources..."
-                      onResultClick={(result) => console.log('Search result clicked:', result)}
+                      onResultClick={(result: any) => console.log('Search result clicked:', result)}
                     />
                   </CardContent>
                 </Card>

@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { TrendingUp, TrendingDown, Minus, Brain, AlertTriangle, CheckCircle, Target, Lightbulb } from 'lucide-react';
 import { UserInsight } from '../../types/ai';
 import { aiService } from '../../services/aiService';
-import { User } from '../../types';
+import { User } from '../../types/index';
 
 interface AutomatedInsightsProps {
   user: User;

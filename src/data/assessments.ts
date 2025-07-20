@@ -1,5 +1,5 @@
 
-import { Assessment, Question } from '../types';
+import { Assessment, Question } from '../types/index';
 
 // Software Development Questions
 const fullStackQuestions: Question[] = [

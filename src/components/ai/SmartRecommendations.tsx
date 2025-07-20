@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Lightbulb, ArrowRight, Clock, Target, BookOpen, TrendingUp, X } from 'lucide-react';
 import { SmartRecommendation } from '../../types/ai';
 import { aiService } from '../../services/aiService';
-import { User } from '../../types';
+import { User } from '../../types/index';
 
 interface SmartRecommendationsProps {
   user: User;

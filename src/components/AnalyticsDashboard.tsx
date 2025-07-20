@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 import { Clock, BookOpen, Target, TrendingUp, Flame, Brain, Star, Award, Lightbulb, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { User } from '../types';
+import { User } from '../types/index';
 import { calculateUserAnalytics, generateWeeklyProgress, generateSkillDistribution, calculateLearningInsights } from '../utils/analyticsCalculations';
 
 interface AnalyticsDashboardProps {

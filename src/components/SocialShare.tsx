@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Share2, Trophy, Target, TrendingUp } from 'lucide-react';
-import { User } from '../types';
+import { User } from '../types/index';
 
 interface SocialShareProps {
   user: User;

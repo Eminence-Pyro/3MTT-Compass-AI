@@ -6,7 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, Calendar, AlertTriangle, Target, Brain, Zap, Clock, Trophy } from 'lucide-react';
 import { PredictiveAnalytics as PredictiveAnalyticsType } from '../../types/ai';
 import { aiService } from '../../services/aiService';
-import { User } from '../../types';
+import { User } from '../../types/index';
 
 interface PredictiveAnalyticsProps {
   user: User;

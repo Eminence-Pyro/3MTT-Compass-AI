@@ -1,5 +1,5 @@
 
-import { LearningModule, User } from '../types';
+import { LearningModule, User } from '../types/index';
 import { learningModules } from '../data/modules';
 import { getTrackTags } from './trackTags';
 

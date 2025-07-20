@@ -9,6 +9,10 @@ interface TrackSelectionProps {
   onSelectTrack: (trackId: string) => void;
 }
 
+interface TrackSelectionProps {
+  onSelectTrack: (trackId: string) => void;
+}
+
 const TrackSelection: React.FC<TrackSelectionProps> = ({ onSelectTrack }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-orange-50 p-4">

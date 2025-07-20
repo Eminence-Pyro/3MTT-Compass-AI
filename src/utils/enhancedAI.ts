@@ -1,4 +1,4 @@
-import { User, LearningModule } from '../types';
+import { User, LearningModule } from '../types/index';
 import { AssessmentResult } from './aiRecommendations';
 import { EnhancedUser } from '../types/enhanced';
 

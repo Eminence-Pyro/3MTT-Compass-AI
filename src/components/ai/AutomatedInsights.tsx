@@ -20,7 +20,7 @@ const AutomatedInsights: React.FC<AutomatedInsightsProps> = ({ user, refreshTrig
 
   useEffect(() => {
     loadInsights();
-  }, [user.completedModules.length, user.skillLevel, refreshTrigger]);
+  }, [user.completedModules.length, user.skillLevel, refreshTrigger, loadInsights]);
 
   const loadInsights = async () => {
     setLoading(true);

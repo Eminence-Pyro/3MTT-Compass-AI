@@ -29,7 +29,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
       await onLogin(email, password, name);
     } catch (error: any) {
       console.error('Authentication error:', error);
-      setError(error.message || 'An error occurred during authentication');
+     setError(error instanceof Error ? error.message : 'An error occurred during authentication');
     } finally {
       setLoading(false);
     }

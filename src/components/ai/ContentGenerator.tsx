@@ -163,7 +163,7 @@ const ContentGenerator: React.FC<ContentGeneratorProps> = ({ userContext }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Tone</Label>
-                  <Select value={parameters.tone} onValueChange={(value) => setParameters(prev => ({ ...prev, tone: value as any }))}>
+                  <Select value={parameters.tone} onValueChange={(value) => setParameters(prev => ({ ...prev, tone: value as ContentGeneration['parameters']['tone'] }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -177,7 +177,7 @@ const ContentGenerator: React.FC<ContentGeneratorProps> = ({ userContext }) => {
 
                 <div className="space-y-2">
                   <Label>Length</Label>
-                  <Select value={parameters.length} onValueChange={(value) => setParameters(prev => ({ ...prev, length: value as any }))}>
+                  <Select value={parameters.length} onValueChange={(value) => setParameters(prev => ({ ...prev, length: value as ContentGeneration['parameters']['length'] }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

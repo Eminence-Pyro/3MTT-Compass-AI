@@ -96,7 +96,7 @@ export function useAuth() {
         // If signup fails because user already exists, it means they provided wrong password
         if (signUpError.message.includes('User already registered')) {
           setLoading(false);
-          throw new Error('Invalid login credentials. Please check your password.');
+          throw new Error('This email is already registered. Please sign in with your password.');
         }
         setLoading(false);
         throw signUpError;

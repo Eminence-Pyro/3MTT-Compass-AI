@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { assessments } from '../data/assessments';
 import { analyzeAssessment, generatePersonalizedPath, adaptLearningPath } from '../utils/aiRecommendations';
@@ -7,22 +6,27 @@ import { tracks } from '../data/tracks';
 import { LearningPath, Achievement } from '../types/index';
 import { toast } from 'sonner';
 import { checkForNewAchievements } from '../utils/achievementEngine';
+import { localStorageService } from '../services/localStorageService';
 
-import AuthForm from '../components/AuthForm';
 import TrackSelection from '../components/TrackSelection';
 import Assessment from '../components/Assessment';
 import LearningDashboard from '../components/LearningDashboard';
 import AchievementNotification from '../components/AchievementNotification';
 import Footer from '../components/Footer';
 
-type AppState = 'auth' | 'track-selection' | 'assessment' | 'dashboard';
+type AppState = 'track-selection' | 'assessment' | 'dashboard';
 
 const Index = () => {
-  const { user, loading, login, logout, updateUser } = useAuth();
-  const [appState, setAppState] = useState<AppState>('auth');
+  const { user, loading, updateUser, logout } = useAuth();
+  const [appState, setAppState] = useState<AppState>('track-selection');
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    // Seed demo data on first load
+    localStorageService.seedDemoData();
+  }, []);
+
+  useEffect(() => {
     if (!loading && user) {
       if (!user.track) {
         setAppState('track-selection');
@@ -31,15 +35,8 @@ const Index = () => {
       } else {
         setAppState('dashboard');
       }
-    } else if (!loading && !user) {
-      setAppState('auth');
     }
   }, [user, loading]);
-
-  const handleLogin = async (email: string, password: string, name: string) => {
-    await login(email, password, name);
-    toast.success('Welcome to 3MTT Compass AI!');
-  };
 
   const handleTrackSelection = async (trackId: string) => {
     console.log('Track selected:', trackId);
@@ -153,7 +150,6 @@ const Index = () => {
 
   const handleLogout = async () => {
     await logout();
-    setAppState('auth');
     toast.success('Logged out successfully');
   };
 
@@ -172,17 +168,11 @@ const Index = () => {
     );
   }
 
+  if (!user) {
+    return null; // This will be handled by the router
+  }
+
   switch (appState) {
-    case 'auth':
-      return (
-        <div className="min-h-screen flex flex-col">
-          <div className="flex-1">
-            <AuthForm onLogin={handleLogin} />
-          </div>
-          <Footer />
-        </div>
-      );
-    
     case 'track-selection':
       return (
         <div className="min-h-screen flex flex-col">
@@ -218,7 +208,6 @@ const Index = () => {
       );
     
     case 'dashboard':
-      if (!user) return null;
       return (
         <div className="min-h-screen flex flex-col">
           <div className="flex-1">

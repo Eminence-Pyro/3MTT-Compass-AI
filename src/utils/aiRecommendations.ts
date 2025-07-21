@@ -1,8 +1,6 @@
 
-// Re-export types
+// Re-export types and functions for backward compatibility
 export type { AssessmentResult } from '../types/assessment';
-
-// Re-export functions
 export { analyzeAssessment } from './assessmentAnalyzer';
 export { generatePersonalizedPath } from './pathGenerator';
 export { adaptLearningPath } from './pathAdapter';

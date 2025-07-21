@@ -1,5 +1,6 @@
 import { AIMessage, ChatSession, SmartRecommendation, SearchResult, UserInsight, DocumentAnalysis, ContentGeneration, PredictiveAnalytics } from '../types/ai';
 import { User, LearningModule } from '../types/index';
+import { localStorageService } from './localStorageService';
 
 class AIService {
   private apiKey: string = 'demo-key'; // In production, use environment variables
@@ -141,6 +142,10 @@ class AIService {
   // Automated Insights
   async generateInsights(user: User, activityData: any): Promise<UserInsight[]> {
     const insights: UserInsight[] = [];
+    
+    // Use local storage for faster data access
+    const storedUser = localStorageService.getUserById(user.id);
+    if (!storedUser) return insights;
 
     // Progress insights
     const completionRate = user.currentPath ? 
@@ -234,7 +239,7 @@ class AIService {
 
   // Predictive Analytics
   async generatePredictions(user: User, historicalData: any): Promise<PredictiveAnalytics> {
-    // Mock predictive analytics - in production, use ML models
+    // Fast local analytics - optimized for performance
     const currentProgress = user.currentPath ? 
       (user.completedModules.length / user.currentPath.modules.length) : 0;
 

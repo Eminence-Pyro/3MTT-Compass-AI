@@ -86,28 +86,52 @@
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js** (v18 or higher) - [Install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-- **npm** or **yarn** package manager
+- **Node.js** (v18 or higher)
+- **Python** (v3.11 or higher)
+- **PostgreSQL** database
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <YOUR_GIT_URL>
-   cd <YOUR_PROJECT_NAME>
+   git clone https://github.com/your-username/3mtt-compass-ai.git
+   cd 3mtt-compass-ai
    ```
 
-2. **Install dependencies**
+2. **Install frontend dependencies**
    ```bash
    npm install
    ```
 
-3. **Start the development server**
+3. **Install backend dependencies**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   # Frontend
+   cp .env.example .env
+   
+   # Backend
+   cd backend
+   cp .env.example .env
+   # Edit .env with your database credentials
+   ```
+
+5. **Start the development servers**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend
+   python app.py
+   
+   # Terminal 2 - Frontend
    ```bash
    npm run dev
    ```
 
-4. **Open your browser**
+6. **Open your browser**
    Navigate to `http://localhost:8080` to see the application
 
 ### Available Scripts
@@ -115,7 +139,6 @@
 - `npm run dev` - Start development server with hot reload
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
-- `npm run lint` - Run ESLint for code quality checks
 
 ## 🎮 How to Use
 

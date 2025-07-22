@@ -49,15 +49,13 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;
 };
 
 const AppContent = () => {
-  const { register, login } = useAuth();
-
   return (
     <Routes>
       <Route 
@@ -77,12 +75,16 @@ const AppContent = () => {
         } 
       />
       <Route 
-        path="/" 
+        path="/dashboard" 
         element={
           <AuthenticatedRoute>
             <Index />
           </AuthenticatedRoute>
         } 
+      />
+      <Route 
+        path="/" 
+        element={<Navigate to="/dashboard" replace />} 
       />
       <Route path="*" element={<NotFound />} />
     </Routes>

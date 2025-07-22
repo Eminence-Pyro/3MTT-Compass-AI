@@ -27,7 +27,7 @@ const Login: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Welcome back to 3MTT Compass AI!');
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: unknown) {
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred during login');

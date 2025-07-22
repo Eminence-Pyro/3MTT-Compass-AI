@@ -28,11 +28,16 @@ const Index = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      if (!user.track) {
+      console.log('User state:', { track: user.track, assessmentCompleted: user.assessmentCompleted });
+      
+      if (!user.track || user.track === '') {
+        console.log('Setting state to track-selection');
         setAppState('track-selection');
       } else if (!user.assessmentCompleted) {
+        console.log('Setting state to assessment');
         setAppState('assessment');
       } else {
+        console.log('Setting state to dashboard');
         setAppState('dashboard');
       }
     }
@@ -169,8 +174,17 @@ const Index = () => {
   }
 
   if (!user) {
-    return null; // This will be handled by the router
+    console.log('No user found, should redirect to login');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-orange-50">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
+
+  console.log('Current app state:', appState);
 
   switch (appState) {
     case 'track-selection':
@@ -232,6 +246,7 @@ const Index = () => {
       );
     
     default:
+      console.log('Default case reached, showing track selection');
       return null;
   }
 };

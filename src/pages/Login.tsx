@@ -107,13 +107,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </Link>
             </p>
           </div>
-
-          {/* Demo Account Info */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs text-blue-700 font-medium mb-1">Demo Account:</p>
-            <p className="text-xs text-blue-600">Email: demo@3mtt.com</p>
-            <p className="text-xs text-blue-600">Password: demo123</p>
-          </div>
         </CardContent>
       </Card>
     </div>

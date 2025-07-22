@@ -157,7 +157,7 @@ class LocalStorageService {
       email: 'demo@3mtt.com',
       password: 'demo123',
       name: 'Demo User',
-      track: 'fullstack',
+      track: '',
       assessmentCompleted: true,
       skillLevel: 'intermediate',
       completedModules: ['3mtt-html-basics', '3mtt-css-styling'],

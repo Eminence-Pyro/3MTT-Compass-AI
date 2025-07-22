@@ -5,17 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, LogIn, AlertCircle, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { toast } from 'sonner';
 
-interface LoginProps {
-  onLogin: (email: string, password: string) => Promise<void>;
-}
-
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError(null);
     
     try {
-      await onLogin(email, password);
+      await login(email, password);
+      toast.success('Welcome back to 3MTT Compass AI!');
+      navigate('/');
     } catch (error: unknown) {
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred during login');

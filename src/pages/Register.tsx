@@ -5,19 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { toast } from 'sonner';
 
-interface RegisterProps {
-  onRegister: (email: string, password: string, name: string) => Promise<void>;
-}
-
-const Register: React.FC<RegisterProps> = ({ onRegister }) => {
+const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +37,9 @@ const Register: React.FC<RegisterProps> = ({ onRegister }) => {
     setError(null);
     
     try {
-      await onRegister(email, password, name);
+      await register(email, password, name);
+      toast.success('Account created successfully! Please sign in with your credentials.');
+      navigate('/login');
     } catch (error: unknown) {
       console.error('Registration error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred during registration');

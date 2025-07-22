@@ -58,23 +58,13 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 const AppContent = () => {
   const { register, login } = useAuth();
 
-  const handleRegister = async (email: string, password: string, name: string) => {
-    await register(email, password, name);
-    toast.success('Account created successfully! Welcome to 3MTT Compass AI!');
-  };
-
-  const handleLogin = async (email: string, password: string) => {
-    await login(email, password);
-    toast.success('Welcome back to 3MTT Compass AI!');
-  };
-
   return (
     <Routes>
       <Route 
         path="/login" 
         element={
           <PublicRoute>
-            <Login onLogin={handleLogin} />
+            <Login />
           </PublicRoute>
         } 
       />
@@ -82,7 +72,7 @@ const AppContent = () => {
         path="/register" 
         element={
           <PublicRoute>
-            <Register onRegister={handleRegister} />
+            <Register />
           </PublicRoute>
         } 
       />

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 
 const Register: React.FC = () => {
@@ -15,6 +16,7 @@ const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,22 +35,9 @@ const Register: React.FC = () => {
 
     setLoading(true);
     setError(null);
-
+    
     try {
-      const response = await fetch('https://threemtt-compass-ai.onrender.com/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, name }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
+      await register(email, password, name);
       toast.success('Account created successfully! Please sign in with your credentials.');
       navigate('/login');
     } catch (error: unknown) {
@@ -80,7 +69,7 @@ const Register: React.FC = () => {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -142,7 +131,7 @@ const Register: React.FC = () => {
               )}
             </Button>
           </form>
-
+          
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}

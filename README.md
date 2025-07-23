@@ -88,7 +88,7 @@
 ### Prerequisites
 - **Node.js** (v18 or higher)
 - **Python** (v3.11 or higher)
-- **PostgreSQL** database
+- **MongoDB** database
 
 ### Installation
 
@@ -117,7 +117,7 @@
    # Backend
    cd backend
    cp .env.example .env
-   # Edit .env with your database credentials
+   # Edit .env with your MongoDB URI
    ```
 
 5. **Start the development servers**

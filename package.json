@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "backend": "cd backend && python app.py",
+    "dev:full": "concurrently \"npm run backend\" \"npm run dev\"",
     "start": "npm run build && npm run preview"
   },
   "dependencies": {

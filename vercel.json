@@ -6,6 +6,6 @@
     }
   ],
   "env": {
-    "VITE_API_URL": "https://your-backend-url.herokuapp.com/api"
+    "VITE_API_URL": "https://threemtt-compass-ai.onrender.com/api"
   }
 }

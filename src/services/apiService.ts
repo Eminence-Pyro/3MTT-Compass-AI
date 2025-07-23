@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://threemtt-compass-ai.onrender.com';
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
@@ -72,6 +72,7 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+<<<<<<< HEAD
 
 // Example usage for registration:
 export async function register(email: string, password: string, name: string) {
@@ -82,3 +83,5 @@ export async function register(email: string, password: string, name: string) {
   });
   return response.json();
 }
+=======
+>>>>>>> a9284d36b55bb069d1841f454e8d3dc7cf6db391

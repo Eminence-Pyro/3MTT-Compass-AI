@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+
+# Virtual environment
+.venv/
+
+# Environment files
+.env
+.env.example
+
+# Node-related files
+node_modules/
+package-lock.json
+
+# Vercel deployment
+.vercel/
+
+# Frontend build artifacts
+public/
+src/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Runtime files
+runtime.txt
+Procfile

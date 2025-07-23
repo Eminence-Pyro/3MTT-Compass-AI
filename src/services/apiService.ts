@@ -72,3 +72,13 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+
+// Example usage for registration:
+export async function register(email: string, password: string, name: string) {
+  const response = await fetch(`${API_BASE_URL}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name })
+  });
+  return response.json();
+}

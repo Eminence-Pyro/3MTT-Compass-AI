@@ -4,23 +4,30 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
 import os
-import json
-from functools import wraps
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 from bson import ObjectId
-import bcrypt
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb+srv://Eminence_Pyro:SecurePass1234@cluster0.xpjtztj.mongodb.net/3mtt_compass?retryWrites=true&w=majority&appName=Cluster0')
 
-# MongoDB connection
-MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/3mtt_compass')
-client = MongoClient(MONGODB_URI)
-db = client.get_database()
-
-# Collections
-users_collection = db.users
-learning_paths_collection = db.learning_paths
+# MongoDB Atlas connection
+try:
+    mongo_client = MongoClient(app.config['MONGO_URI'])
+    # Always select the database explicitly for Atlas
+    db = mongo_client['3mtt_compass']
+    users_collection = db['users']
+    learning_paths_collection = db['learning_paths']
+    # Test connection
+    mongo_client.admin.command('ping')
+    print("MongoDB Atlas connection successful.")
+except errors.ConnectionFailure as e:
+    print(f"MongoDB Atlas connection failed: {e}")
+    raise
+except Exception as e:
+    print(f"MongoDB error: {e}")
+    raise
 
 CORS(app)
 
@@ -249,6 +256,12 @@ def health_check():
             'error': str(e),
             'timestamp': datetime.utcnow().isoformat()
         }), 500
+
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        'message': '3MTT Compass AI Backend is running. See /api/health for status.'
+    }), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

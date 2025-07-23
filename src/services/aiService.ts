@@ -1,6 +1,5 @@
 import { AIMessage, ChatSession, SmartRecommendation, SearchResult, UserInsight, DocumentAnalysis, ContentGeneration, PredictiveAnalytics } from '../types/ai';
 import { User, LearningModule } from '../types/index';
-import { localStorageService } from './localStorageService';
 
 class AIService {
   private apiKey: string = 'demo-key'; // In production, use environment variables
@@ -8,28 +7,21 @@ class AIService {
 
   // Conversational AI Layer
   async sendMessage(sessionId: string, message: string, context: any): Promise<AIMessage> {
-    // Mock AI response - in production, integrate with OpenAI, Claude, or similar
-    const responses = {
-      onboarding: [
-        "Welcome to 3MTT Compass AI! I'm here to help you navigate your learning journey. What track are you interested in?",
-        "Great choice! Let me help you get started with your personalized learning path.",
-        "I can help you understand the assessment process and what to expect."
-      ],
-      guidance: [
-        "Based on your progress, I recommend focusing on the fundamentals before moving to advanced topics.",
-        "You're doing great! Consider taking a short break and then tackling the next module.",
-        "I notice you're struggling with this concept. Would you like me to suggest some additional resources?"
-      ],
-      faq: [
-        "The 3MTT program is designed to train 3 million technical talents in Nigeria. You can learn more about specific tracks and requirements.",
-        "Your learning path is personalized based on your assessment results and progress. It adapts as you learn.",
-        "You can track your progress through the analytics dashboard and earn achievements as you complete modules."
-      ]
-    };
+    // Smarter AI response using context and message analysis
+    const { currentTrack, skillLevel, completedModules, recentActivity } = context || {};
+    let response = "";
 
-    const messageType = this.detectMessageType(message);
-    const responsePool = responses[messageType as keyof typeof responses] || responses.guidance;
-    const response = responsePool[Math.floor(Math.random() * responsePool.length)];
+    if (/youtube|video|external/i.test(message)) {
+      response = "Here are some top YouTube resources for your track. Would you like a video recommendation?";
+    } else if (/course|module|learn/i.test(message)) {
+      response = `Based on your interest in ${currentTrack || "your track"}, I recommend starting with the official 3MTT course and supplementing with external resources.`;
+    } else if (/struggle|difficult|help/i.test(message)) {
+      response = "It looks like you're facing challenges. Would you like tips, peer support, or extra materials?";
+    } else if (skillLevel === 'beginner' && completedModules && completedModules.length > 5) {
+      response = "Great progress! You might be ready to try intermediate modules or retake the assessment.";
+    } else {
+      response = "Keep up the good work! Let me know if you want recommendations, analytics, or help with a specific topic.";
+    }
 
     return {
       id: `msg_${Date.now()}`,
@@ -37,26 +29,83 @@ class AIService {
       content: response,
       timestamp: new Date().toISOString(),
       metadata: {
-        type: messageType as any,
-        confidence: 0.85
+        type: 'guidance',
+        confidence: 0.92
       }
     };
-  }
-
-  private detectMessageType(message: string): string {
-    const lowerMessage = message.toLowerCase();
-    if (lowerMessage.includes('start') || lowerMessage.includes('begin') || lowerMessage.includes('new')) {
-      return 'onboarding';
-    }
-    if (lowerMessage.includes('help') || lowerMessage.includes('how') || lowerMessage.includes('what')) {
-      return 'faq';
-    }
-    return 'guidance';
   }
 
   // Smart Recommendations
   async generateRecommendations(user: User, behaviorData: any): Promise<SmartRecommendation[]> {
     const recommendations: SmartRecommendation[] = [];
+
+    // Use user context for smarter recommendations
+    if (user.track && user.skillLevel) {
+      recommendations.push({
+        id: 'rec_personalized',
+        type: 'module',
+        title: `Personalized ${user.track} Module`,
+        description: `Recommended for your ${user.skillLevel} level in the ${user.track} track.`,
+        confidence: 0.97,
+        reasoning: 'Personalized based on track and skill level',
+        actionUrl: `/dashboard/${user.track}`,
+        metadata: {
+          estimatedTime: 45,
+          difficulty: user.skillLevel,
+          tags: [user.track, user.skillLevel]
+        }
+      });
+    }
+
+    // External resource matching (YouTube search based on track)
+    if (user.track) {
+      recommendations.push({
+        id: 'rec_youtube_dynamic',
+        type: 'resource',
+        title: `YouTube: Top ${user.track} Tutorials`,
+        description: `Curated YouTube playlist for ${user.track} learners.`,
+        confidence: 0.91,
+        reasoning: 'Matched external resources to user track',
+        actionUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(user.track + " tutorial")}`,
+        metadata: {
+          estimatedTime: 60,
+          difficulty: user.skillLevel,
+          tags: ['youtube', user.track, 'video']
+        }
+      });
+    }
+
+    // 3MTT Portal Course Example
+    recommendations.push({
+      id: 'rec_3mtt_course',
+      type: 'module',
+      title: '3MTT Official: Fullstack Foundations',
+      description: 'Start with the official 3MTT Fullstack Foundations course to build your core skills.',
+      confidence: 0.98,
+      reasoning: 'Recommended by 3MTT portal for new learners',
+      actionUrl: 'https://app.3mtt.training/courses/fullstack-foundations',
+      metadata: {
+        estimatedTime: 120,
+        difficulty: 'beginner',
+        tags: ['3mtt', 'fullstack', 'official']
+      }
+    });
+
+    // External Source (YouTube) Example
+    recommendations.push({
+      id: 'rec_youtube_js',
+      type: 'resource',
+      title: 'YouTube: JavaScript Crash Course',
+      description: 'Watch this YouTube video to quickly learn JavaScript basics.',
+      confidence: 0.93,
+      reasoning: 'Popular external resource for beginners',
+      actionUrl: 'https://www.youtube.com/watch?v=PkZNo7MFNFg',
+      metadata: {
+        estimatedTime: 60,
+        difficulty: 'beginner',
+        tags: ['youtube', 'javascript', 'video']
+      }
+    });
 
     // Mock recommendations based on user data
     if (user.completedModules.length === 0) {

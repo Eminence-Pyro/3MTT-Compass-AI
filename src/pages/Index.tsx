@@ -22,11 +22,6 @@ const Index = () => {
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
 
   useEffect(() => {
-    // Seed demo data on first load
-    localStorageService.seedDemoData();
-  }, []);
-
-  useEffect(() => {
     if (!loading && user) {
       console.log('User state:', { track: user.track, assessmentCompleted: user.assessmentCompleted });
       

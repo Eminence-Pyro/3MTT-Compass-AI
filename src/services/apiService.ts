@@ -57,6 +57,11 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async healthCheck() {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return this.handleResponse(response);
+  }
+
   logout() {
     localStorage.removeItem('auth_token');
   }

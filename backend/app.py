@@ -1,44 +1,28 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
 import os
 import json
 from functools import wraps
+from pymongo import MongoClient
+from bson import ObjectId
+import bcrypt
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/3mtt_compass')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+# MongoDB connection
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/3mtt_compass')
+client = MongoClient(MONGODB_URI)
+db = client.get_database()
+
+# Collections
+users_collection = db.users
+learning_paths_collection = db.learning_paths
+
 CORS(app)
-
-# Database Models
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    track = db.Column(db.String(50), default='')
-    assessment_completed = db.Column(db.Boolean, default=False)
-    skill_level = db.Column(db.String(20), default='beginner')
-    completed_modules = db.Column(db.Text, default='[]')  # JSON string
-    achievements = db.Column(db.Text, default='[]')  # JSON string
-    total_points = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class LearningPath(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    track = db.Column(db.String(50), nullable=False)
-    modules = db.Column(db.Text, nullable=False)  # JSON string
-    progress = db.Column(db.Float, default=0.0)
-    adaptation_history = db.Column(db.Text, default='[]')  # JSON string
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # JWT Token decorator
 def token_required(f):
@@ -52,44 +36,52 @@ def token_required(f):
             if token.startswith('Bearer '):
                 token = token[7:]
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-            current_user = User.query.get(data['user_id'])
+            current_user = users_collection.find_one({'_id': ObjectId(data['user_id'])})
             if not current_user:
                 return jsonify({'error': 'User not found'}), 401
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token has expired'}), 401
         except jwt.InvalidTokenError:
             return jsonify({'error': 'Token is invalid'}), 401
+        except Exception as e:
+            return jsonify({'error': 'Invalid token format'}), 401
         
         return f(current_user, *args, **kwargs)
     return decorated
 
 # Helper functions
 def user_to_dict(user):
-    learning_path = LearningPath.query.filter_by(user_id=user.id).first()
+    if not user:
+        return None
+    
+    learning_path = learning_paths_collection.find_one({'user_id': str(user['_id'])})
+    
     return {
-        'id': str(user.id),
-        'email': user.email,
-        'name': user.name,
-        'track': user.track,
-        'assessmentCompleted': user.assessment_completed,
-        'skillLevel': user.skill_level,
-        'completedModules': json.loads(user.completed_modules),
-        'achievements': json.loads(user.achievements),
-        'totalPoints': user.total_points,
-        'currentPath': learning_path_to_dict(learning_path) if learning_path else None
+        'id': str(user['_id']),
+        'email': user['email'],
+        'name': user['name'],
+        'track': user.get('track', ''),
+        'assessmentCompleted': user.get('assessment_completed', False),
+        'skillLevel': user.get('skill_level', 'beginner'),
+        'completedModules': user.get('completed_modules', []),
+        'achievements': user.get('achievements', []),
+        'totalPoints': user.get('total_points', 0),
+        'currentPath': learning_path_to_dict(learning_path) if learning_path else None,
+        'createdAt': user.get('created_at', datetime.utcnow()).isoformat(),
+        'updatedAt': user.get('updated_at', datetime.utcnow()).isoformat()
     }
 
 def learning_path_to_dict(path):
     if not path:
         return None
     return {
-        'id': str(path.id),
-        'userId': str(path.user_id),
-        'track': path.track,
-        'modules': json.loads(path.modules),
-        'progress': path.progress,
-        'adaptationHistory': json.loads(path.adaptation_history),
-        'createdAt': path.created_at.isoformat()
+        'id': str(path['_id']),
+        'userId': path['user_id'],
+        'track': path['track'],
+        'modules': path['modules'],
+        'progress': path.get('progress', 0),
+        'adaptationHistory': path.get('adaptation_history', []),
+        'createdAt': path.get('created_at', datetime.utcnow()).isoformat()
     }
 
 # Routes
@@ -104,25 +96,39 @@ def register():
         if not email or not password or not name:
             return jsonify({'error': 'Email, password, and name are required'}), 400
         
-        if User.query.filter_by(email=email).first():
+        # Check if user already exists
+        if users_collection.find_one({'email': email}):
             return jsonify({'error': 'User already exists with this email'}), 400
         
         if len(password) < 6:
             return jsonify({'error': 'Password must be at least 6 characters long'}), 400
         
-        user = User(
-            email=email,
-            password_hash=generate_password_hash(password),
-            name=name
-        )
+        # Hash password
+        password_hash = generate_password_hash(password)
         
-        db.session.add(user)
-        db.session.commit()
+        # Create user document
+        user_doc = {
+            'email': email,
+            'password_hash': password_hash,
+            'name': name,
+            'track': '',
+            'assessment_completed': False,
+            'skill_level': 'beginner',
+            'completed_modules': [],
+            'achievements': [],
+            'total_points': 0,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        }
         
-        return jsonify({'message': 'User created successfully'}), 201
+        result = users_collection.insert_one(user_doc)
+        
+        return jsonify({
+            'message': 'User created successfully',
+            'user_id': str(result.inserted_id)
+        }), 201
     
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -135,13 +141,14 @@ def login():
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
         
-        user = User.query.filter_by(email=email).first()
+        user = users_collection.find_one({'email': email})
         
-        if not user or not check_password_hash(user.password_hash, password):
+        if not user or not check_password_hash(user['password_hash'], password):
             return jsonify({'error': 'Invalid login credentials'}), 401
         
+        # Generate JWT token
         token = jwt.encode({
-            'user_id': user.id,
+            'user_id': str(user['_id']),
             'exp': datetime.utcnow() + timedelta(days=7)
         }, app.config['SECRET_KEY'], algorithm='HS256')
         
@@ -164,58 +171,84 @@ def update_user(current_user):
     try:
         data = request.get_json()
         
-        if 'track' in data:
-            current_user.track = data['track']
-        if 'assessmentCompleted' in data:
-            current_user.assessment_completed = data['assessmentCompleted']
-        if 'skillLevel' in data:
-            current_user.skill_level = data['skillLevel']
-        if 'completedModules' in data:
-            current_user.completed_modules = json.dumps(data['completedModules'])
-        if 'achievements' in data:
-            current_user.achievements = json.dumps(data['achievements'])
-        if 'totalPoints' in data:
-            current_user.total_points = data['totalPoints']
+        # Prepare update data
+        update_data = {'updated_at': datetime.utcnow()}
         
-        current_user.updated_at = datetime.utcnow()
+        if 'track' in data:
+            update_data['track'] = data['track']
+        if 'assessmentCompleted' in data:
+            update_data['assessment_completed'] = data['assessmentCompleted']
+        if 'skillLevel' in data:
+            update_data['skill_level'] = data['skillLevel']
+        if 'completedModules' in data:
+            update_data['completed_modules'] = data['completedModules']
+        if 'achievements' in data:
+            update_data['achievements'] = data['achievements']
+        if 'totalPoints' in data:
+            update_data['total_points'] = data['totalPoints']
+        
+        # Update user
+        users_collection.update_one(
+            {'_id': current_user['_id']},
+            {'$set': update_data}
+        )
         
         # Handle learning path
         if 'currentPath' in data and data['currentPath']:
             path_data = data['currentPath']
-            existing_path = LearningPath.query.filter_by(user_id=current_user.id).first()
+            
+            # Check if learning path exists
+            existing_path = learning_paths_collection.find_one({'user_id': str(current_user['_id'])})
             
             if existing_path:
-                existing_path.track = path_data['track']
-                existing_path.modules = json.dumps(path_data['modules'])
-                existing_path.progress = path_data.get('progress', 0)
-                existing_path.adaptation_history = json.dumps(path_data.get('adaptationHistory', []))
-            else:
-                new_path = LearningPath(
-                    user_id=current_user.id,
-                    track=path_data['track'],
-                    modules=json.dumps(path_data['modules']),
-                    progress=path_data.get('progress', 0),
-                    adaptation_history=json.dumps(path_data.get('adaptationHistory', []))
+                # Update existing path
+                learning_paths_collection.update_one(
+                    {'_id': existing_path['_id']},
+                    {'$set': {
+                        'track': path_data['track'],
+                        'modules': path_data['modules'],
+                        'progress': path_data.get('progress', 0),
+                        'adaptation_history': path_data.get('adaptationHistory', []),
+                        'updated_at': datetime.utcnow()
+                    }}
                 )
-                db.session.add(new_path)
+            else:
+                # Create new path
+                path_doc = {
+                    'user_id': str(current_user['_id']),
+                    'track': path_data['track'],
+                    'modules': path_data['modules'],
+                    'progress': path_data.get('progress', 0),
+                    'adaptation_history': path_data.get('adaptationHistory', []),
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                }
+                learning_paths_collection.insert_one(path_doc)
         
-        db.session.commit()
-        return jsonify({'user': user_to_dict(current_user)}), 200
+        # Get updated user
+        updated_user = users_collection.find_one({'_id': current_user['_id']})
+        return jsonify({'user': user_to_dict(updated_user)}), 200
     
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
-
-# Initialize database
-@app.before_request
-def create_tables():
-    if not hasattr(create_tables, 'called'):
-        db.create_all()
-        create_tables.called = True
+    try:
+        # Test database connection
+        db.command('ping')
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'database': 'disconnected',
+            'error': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

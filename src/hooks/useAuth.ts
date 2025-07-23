@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User as AppUser, Achievement, LearningModule } from '../types/index';
+import { User as AppUser } from '../types/index';
 import { apiService } from '../services/apiService';
 
 export function useAuth() {

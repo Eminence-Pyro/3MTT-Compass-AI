@@ -1,6 +1,6 @@
 import { AIMessage, ChatSession, SmartRecommendation, SearchResult, UserInsight, DocumentAnalysis, ContentGeneration, PredictiveAnalytics } from '../types/ai';
 import { User, LearningModule } from '../types/index';
-import { localStorageService } from './localStorageService';
+import { apiService } from './apiService';
 
 class AIService {
   private apiKey: string = 'demo-key'; // In production, use environment variables

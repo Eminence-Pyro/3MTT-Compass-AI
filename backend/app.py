@@ -14,7 +14,7 @@ app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb+srv://Eminence_Py
 
 # MongoDB Atlas connection
 try:
-    mongo_client = MongoClient(app.config['MONGO_URI'])
+    mongo_client = MongoClient(app.config['MONGO_URI'], tls=True)
     # Always select the database explicitly for Atlas
     db = mongo_client['3mtt_compass']
     users_collection = db['users']

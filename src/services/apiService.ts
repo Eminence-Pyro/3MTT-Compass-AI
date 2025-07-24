@@ -33,11 +33,11 @@ class ApiService {
       body: JSON.stringify({ email, password })
     });
     const data = await this.handleResponse(response);
-    
+
     if (data.token) {
       localStorage.setItem('auth_token', data.token);
     }
-    
+
     return data;
   }
 
@@ -72,16 +72,3 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
-<<<<<<< HEAD
-
-// Example usage for registration:
-export async function register(email: string, password: string, name: string) {
-  const response = await fetch(`${API_BASE_URL}/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, name })
-  });
-  return response.json();
-}
-=======
->>>>>>> a9284d36b55bb069d1841f454e8d3dc7cf6db391

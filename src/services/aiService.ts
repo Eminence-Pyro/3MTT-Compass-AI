@@ -1,28 +1,42 @@
-import { AIMessage, ChatSession, SmartRecommendation, SearchResult, UserInsight, DocumentAnalysis, ContentGeneration, PredictiveAnalytics } from '../types/ai';
+import {
+  AIMessage,
+  ChatSession,
+  SmartRecommendation,
+  SearchResult,
+  UserInsight,
+  DocumentAnalysis,
+  ContentGeneration,
+  PredictiveAnalytics
+} from '../types/ai';
+
 import { User, LearningModule } from '../types/index';
-<<<<<<< HEAD
-=======
-import { apiService } from './apiService';
->>>>>>> a9284d36b55bb069d1841f454e8d3dc7cf6db391
+// If apiService is needed, uncomment below
+// import { apiService } from './apiService';
+
+// Placeholder for localStorageService (implement or import as needed)
+const localStorageService = {
+  getUserById: (id: string) => {
+    const userJson = localStorage.getItem(`user_${id}`);
+    return userJson ? JSON.parse(userJson) : null;
+  }
+};
 
 class AIService {
-  private apiKey: string = 'demo-key'; // In production, use environment variables
-  private baseUrl: string = 'https://api.openai.com/v1'; // Mock for demo
+  private apiKey: string = 'demo-key';
+  private baseUrl: string = 'https://api.openai.com/v1'; // mock
 
-  // Conversational AI Layer
   async sendMessage(sessionId: string, message: string, context: any): Promise<AIMessage> {
-    // Smarter AI response using context and message analysis
-    const { currentTrack, skillLevel, completedModules, recentActivity } = context || {};
+    const { currentTrack, skillLevel, completedModules } = context || {};
     let response = "";
 
     if (/youtube|video|external/i.test(message)) {
       response = "Here are some top YouTube resources for your track. Would you like a video recommendation?";
     } else if (/course|module|learn/i.test(message)) {
-      response = `Based on your interest in ${currentTrack || "your track"}, I recommend starting with the official 3MTT course and supplementing with external resources.`;
+      response = `Based on your interest in ${currentTrack || "your track"}, I recommend starting with the official 3MTT course.`;
     } else if (/struggle|difficult|help/i.test(message)) {
       response = "It looks like you're facing challenges. Would you like tips, peer support, or extra materials?";
-    } else if (skillLevel === 'beginner' && completedModules && completedModules.length > 5) {
-      response = "Great progress! You might be ready to try intermediate modules or retake the assessment.";
+    } else if (skillLevel === 'beginner' && completedModules?.length > 5) {
+      response = "Great progress! You might be ready to try intermediate modules.";
     } else {
       response = "Keep up the good work! Let me know if you want recommendations, analytics, or help with a specific topic.";
     }
@@ -32,18 +46,13 @@ class AIService {
       role: 'assistant',
       content: response,
       timestamp: new Date().toISOString(),
-      metadata: {
-        type: 'guidance',
-        confidence: 0.92
-      }
+      metadata: { type: 'guidance', confidence: 0.92 }
     };
   }
 
-  // Smart Recommendations
   async generateRecommendations(user: User, behaviorData: any): Promise<SmartRecommendation[]> {
     const recommendations: SmartRecommendation[] = [];
 
-    // Use user context for smarter recommendations
     if (user.track && user.skillLevel) {
       recommendations.push({
         id: 'rec_personalized',
@@ -51,7 +60,7 @@ class AIService {
         title: `Personalized ${user.track} Module`,
         description: `Recommended for your ${user.skillLevel} level in the ${user.track} track.`,
         confidence: 0.97,
-        reasoning: 'Personalized based on track and skill level',
+        reasoning: 'Based on track and skill level',
         actionUrl: `/dashboard/${user.track}`,
         metadata: {
           estimatedTime: 45,
@@ -61,7 +70,6 @@ class AIService {
       });
     }
 
-    // External resource matching (YouTube search based on track)
     if (user.track) {
       recommendations.push({
         id: 'rec_youtube_dynamic',
@@ -69,7 +77,7 @@ class AIService {
         title: `YouTube: Top ${user.track} Tutorials`,
         description: `Curated YouTube playlist for ${user.track} learners.`,
         confidence: 0.91,
-        reasoning: 'Matched external resources to user track',
+        reasoning: 'External match to track',
         actionUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(user.track + " tutorial")}`,
         metadata: {
           estimatedTime: 60,
@@ -79,14 +87,13 @@ class AIService {
       });
     }
 
-    // 3MTT Portal Course Example
     recommendations.push({
       id: 'rec_3mtt_course',
       type: 'module',
       title: '3MTT Official: Fullstack Foundations',
-      description: 'Start with the official 3MTT Fullstack Foundations course to build your core skills.',
+      description: 'Start with the official 3MTT Fullstack Foundations course.',
       confidence: 0.98,
-      reasoning: 'Recommended by 3MTT portal for new learners',
+      reasoning: 'Recommended for new learners',
       actionUrl: 'https://app.3mtt.training/courses/fullstack-foundations',
       metadata: {
         estimatedTime: 120,
@@ -95,14 +102,13 @@ class AIService {
       }
     });
 
-    // External Source (YouTube) Example
     recommendations.push({
       id: 'rec_youtube_js',
       type: 'resource',
       title: 'YouTube: JavaScript Crash Course',
       description: 'Watch this YouTube video to quickly learn JavaScript basics.',
       confidence: 0.93,
-      reasoning: 'Popular external resource for beginners',
+      reasoning: 'Popular beginner resource',
       actionUrl: 'https://www.youtube.com/watch?v=PkZNo7MFNFg',
       metadata: {
         estimatedTime: 60,
@@ -111,15 +117,14 @@ class AIService {
       }
     });
 
-    // Mock recommendations based on user data
     if (user.completedModules.length === 0) {
       recommendations.push({
         id: 'rec_start',
         type: 'action',
         title: 'Start Your First Module',
-        description: 'Begin your learning journey with the foundational concepts in your track.',
+        description: 'Begin your learning journey with foundational concepts.',
         confidence: 0.95,
-        reasoning: 'New users benefit from starting with basics',
+        reasoning: 'New user start recommendation',
         actionUrl: '/dashboard'
       });
     }
@@ -129,9 +134,9 @@ class AIService {
         id: 'rec_continue',
         type: 'module',
         title: 'Continue Learning Momentum',
-        description: 'Keep up the great work! Your next recommended module is ready.',
+        description: 'Your next module is ready!',
         confidence: 0.88,
-        reasoning: 'Consistent learning improves retention',
+        reasoning: 'Reinforce consistent learning',
         metadata: {
           estimatedTime: 30,
           difficulty: user.skillLevel
@@ -144,9 +149,9 @@ class AIService {
         id: 'rec_level_up',
         type: 'action',
         title: 'Ready for Intermediate Level?',
-        description: 'Your progress suggests you might be ready for more challenging content.',
+        description: 'Consider advancing to intermediate content.',
         confidence: 0.75,
-        reasoning: 'Strong performance on beginner modules',
+        reasoning: 'Strong beginner performance',
         actionUrl: '/assessment'
       });
     }
@@ -154,14 +159,12 @@ class AIService {
     return recommendations;
   }
 
-  // Semantic Search
   async semanticSearch(query: string, context: any): Promise<SearchResult[]> {
-    // Mock semantic search - in production, use vector embeddings
     const mockResults: SearchResult[] = [
       {
         id: 'search_1',
         title: 'JavaScript Fundamentals',
-        content: 'Learn the basics of JavaScript programming including variables, functions, and control structures.',
+        content: 'Learn JS basics like variables, functions, and control flow.',
         type: 'module',
         relevanceScore: 0.92,
         metadata: {
@@ -173,7 +176,7 @@ class AIService {
       {
         id: 'search_2',
         title: 'React Components',
-        content: 'Understanding React components, props, and state management for building dynamic user interfaces.',
+        content: 'Understand React components, props, and state.',
         type: 'module',
         relevanceScore: 0.87,
         metadata: {
@@ -184,25 +187,20 @@ class AIService {
       }
     ];
 
-    // Simple keyword matching for demo
     const queryLower = query.toLowerCase();
-    return mockResults.filter(result => 
-      result.title.toLowerCase().includes(queryLower) ||
-      result.content.toLowerCase().includes(queryLower)
-    ).sort((a, b) => b.relevanceScore - a.relevanceScore);
+    return mockResults
+      .filter(result => result.title.toLowerCase().includes(queryLower) || result.content.toLowerCase().includes(queryLower))
+      .sort((a, b) => b.relevanceScore - a.relevanceScore);
   }
 
-  // Automated Insights
   async generateInsights(user: User, activityData: any): Promise<UserInsight[]> {
     const insights: UserInsight[] = [];
-    
-    // Use local storage for faster data access
     const storedUser = localStorageService.getUserById(user.id);
     if (!storedUser) return insights;
 
-    // Progress insights
-    const completionRate = user.currentPath ? 
-      (user.completedModules.length / user.currentPath.modules.length) * 100 : 0;
+    const completionRate = user.currentPath
+      ? (user.completedModules.length / user.currentPath.modules.length) * 100
+      : 0;
 
     insights.push({
       id: 'insight_progress',
@@ -215,13 +213,12 @@ class AIService {
       priority: completionRate < 30 ? 'high' : 'medium'
     });
 
-    // Performance insights
     if (user.completedModules.length >= 3) {
       insights.push({
         id: 'insight_performance',
         type: 'performance',
         title: 'Learning Velocity',
-        description: 'Your learning pace is consistent and effective',
+        description: 'You’re learning consistently.',
         value: 'Good',
         trend: 'up',
         actionable: false,
@@ -229,13 +226,12 @@ class AIService {
       });
     }
 
-    // Recommendation insights
     if (user.skillLevel === 'beginner' && user.completedModules.length >= 5) {
       insights.push({
         id: 'insight_recommendation',
         type: 'recommendation',
         title: 'Skill Level Assessment',
-        description: 'Consider retaking the assessment to unlock intermediate content',
+        description: 'You may be ready for intermediate content.',
         value: 'Action Required',
         actionable: true,
         priority: 'high'
@@ -245,43 +241,39 @@ class AIService {
     return insights;
   }
 
-  // Document Intelligence
   async analyzeDocument(file: File): Promise<DocumentAnalysis> {
-    // Mock document analysis - in production, use OCR and NLP services
     return {
       id: `doc_${Date.now()}`,
       fileName: file.name,
       type: file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'text',
-      extractedText: 'This is mock extracted text from the document...',
-      summary: 'This document appears to contain learning materials related to web development.',
+      extractedText: 'Mock extracted text...',
+      summary: 'Document contains web development learning materials.',
       tags: ['web-development', 'javascript', 'tutorial'],
       entities: [
         { type: 'technology', value: 'JavaScript', confidence: 0.95 },
         { type: 'concept', value: 'Functions', confidence: 0.88 }
       ],
-      insights: [
-        'Document contains beginner-level content',
-        'Suitable for fullstack development track',
-        'Estimated reading time: 15 minutes'
-      ]
+      insights: ['Beginner-level content', 'Fullstack relevance', 'Estimated reading time: 15 minutes']
     };
   }
 
-  // Content Generation
-  async generateContent(type: ContentGeneration['type'], prompt: string, parameters: ContentGeneration['parameters']): Promise<ContentGeneration> {
-    // Mock content generation - in production, use GPT or similar
+  async generateContent(
+    type: ContentGeneration['type'],
+    prompt: string,
+    parameters: ContentGeneration['parameters']
+  ): Promise<ContentGeneration> {
     const mockContent = {
-      report: `# Learning Progress Report\n\nBased on your recent activity, you've made excellent progress in your ${prompt} track. Here are the key highlights:\n\n## Achievements\n- Completed 5 modules\n- Maintained consistent learning pace\n- Demonstrated strong understanding of core concepts\n\n## Recommendations\n- Continue with intermediate modules\n- Consider peer collaboration\n- Practice with real-world projects`,
-      summary: `## Summary\n\nThis ${prompt} covers essential concepts and practical applications. Key takeaways include fundamental principles, best practices, and hands-on examples that will help you build a strong foundation.`,
-      post: `🎉 Just completed another milestone in my ${prompt} learning journey! The concepts are really clicking and I'm excited to apply what I've learned. #3MTTNigeria #TechEducation #LearningJourney`,
-      plan: `# Learning Plan: ${prompt}\n\n## Week 1-2: Foundations\n- Complete basic modules\n- Practice exercises\n- Review concepts\n\n## Week 3-4: Application\n- Work on projects\n- Apply learned concepts\n- Seek feedback\n\n## Week 5-6: Mastery\n- Advanced topics\n- Portfolio development\n- Prepare for next level`
+      report: `# Progress Report\n\nYou're making excellent progress in ${prompt}.`,
+      summary: `## Summary\n\nThis ${prompt} covers key topics and applications.`,
+      post: `🎉 Another milestone unlocked in ${prompt}! #Learning`,
+      plan: `# Learning Plan for ${prompt}\n\nWeek 1: Basics\nWeek 2: Practice\nWeek 3: Advanced\n`
     };
 
     return {
       type,
       prompt,
       parameters,
-      result: mockContent[type] || 'Generated content would appear here.',
+      result: mockContent[type] || 'Generated content here.',
       metadata: {
         wordCount: mockContent[type]?.split(' ').length || 0,
         generatedAt: new Date().toISOString(),
@@ -290,33 +282,32 @@ class AIService {
     };
   }
 
-  // Predictive Analytics
   async generatePredictions(user: User, historicalData: any): Promise<PredictiveAnalytics> {
-    // Fast local analytics - optimized for performance
-    const currentProgress = user.currentPath ? 
-      (user.completedModules.length / user.currentPath.modules.length) : 0;
+    const currentProgress = user.currentPath
+      ? user.completedModules.length / user.currentPath.modules.length
+      : 0;
 
-    const remainingModules = user.currentPath ? 
-      user.currentPath.modules.length - user.completedModules.length : 0;
+    const remainingModules = user.currentPath
+      ? user.currentPath.modules.length - user.completedModules.length
+      : 0;
 
-    // Estimate completion date based on current pace
-    const estimatedDaysToComplete = remainingModules * 3; // 3 days per module average
+    const estimatedDays = remainingModules * 3;
     const completionDate = new Date();
-    completionDate.setDate(completionDate.getDate() + estimatedDaysToComplete);
+    completionDate.setDate(completionDate.getDate() + estimatedDays);
 
     return {
       userId: user.id,
       predictions: {
         completionDate: completionDate.toISOString(),
-        successProbability: Math.min(0.95, 0.6 + (currentProgress * 0.3)),
+        successProbability: Math.min(0.95, 0.6 + currentProgress * 0.3),
         recommendedPace: currentProgress > 0.7 ? 'normal' : currentProgress > 0.3 ? 'normal' : 'slow',
         riskFactors: currentProgress < 0.2 ? ['Low engagement', 'Slow progress'] : [],
         opportunities: ['Peer collaboration', 'Advanced modules', 'Certification preparation']
       },
       trends: {
-        learningVelocity: [0.2, 0.4, 0.6, 0.8, 1.0, 0.9, 1.1],
-        engagementScore: [0.7, 0.8, 0.75, 0.9, 0.85, 0.95, 0.9],
-        difficultyProgression: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        learningVelocity: [0.2, 0.4, 0.6, 0.8, 1.0],
+        engagementScore: [0.7, 0.8, 0.75, 0.9],
+        difficultyProgression: [0.3, 0.4, 0.5, 0.6]
       },
       forecasts: {
         nextWeekActivity: Math.floor(Math.random() * 5) + 3,

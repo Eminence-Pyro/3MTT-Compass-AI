@@ -19,6 +19,8 @@ try:
     db = mongo_client['3mtt_compass']
     users_collection = db['users']
     learning_paths_collection = db['learning_paths']
+    users_collection.create_index("email")
+
     # Test connection
     mongo_client.admin.command('ping')
     print("MongoDB Atlas connection successful.")

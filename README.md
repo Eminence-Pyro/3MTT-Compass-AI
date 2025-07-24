@@ -6,7 +6,7 @@
 
 ## 🎯 Project Information
 
-**URL**: https://lovable.dev/projects/3f2327bf-f54e-4f10-93ed-3c39670fc115
+**URL**: (https://3mtt-compass-ai.vercel.app/)
 
 ## ✨ Key Features
 

@@ -1,238 +1,138 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Clock, ExternalLink, BookOpen, Target, HelpCircle, Loader2 } from 'lucide-react';
-import { SearchResult } from '../../types/ai';
-import { aiService } from '../../services/aiService';
+import { Search, Loader2, BookOpen, AlertCircle, Sparkles } from 'lucide-react';
+import { User } from '../../types/index';
+import { apiService } from '../../services/apiService';
 
-interface SemanticSearchProps {
-  onResultClick?: (result: SearchResult) => void;
-  placeholder?: string;
-  className?: string;
+interface SearchResult {
+  title: string;
+  description: string;
+  relevance: number;
+  type: string;
+  tags: string[];
 }
 
-const SemanticSearch: React.FC<SemanticSearchProps> = ({ 
-  onResultClick, 
-  placeholder = "Search for modules, tracks, or ask questions...",
-  className = ""
-}) => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const searchRef = useRef<HTMLDivElement>(null);
+interface SemanticSearchProps {
+  user: User;
+}
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
-    };
+const SemanticSearch: React.FC<SemanticSearchProps> = ({ user }) => {
+  const [query, setQuery]       = useState('');
+  const [results, setResults]   = useState<SearchResult[]>([]);
+  const [suggested, setSuggested] = useState<string[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [searched, setSearched] = useState(false);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    // Load recent searches from localStorage
-    const saved = localStorage.getItem('recentSearches');
-    if (saved) {
-      setRecentSearches(JSON.parse(saved));
-    }
-  }, []);
-
-  const handleSearch = async (searchQuery: string = query) => {
-    if (!searchQuery.trim()) return;
-
-    setIsLoading(true);
-    setShowResults(true);
-
+  const handleSearch = async () => {
+    const q = query.trim();
+    if (!q || loading) return;
+    setLoading(true);
+    setError('');
+    setSearched(true);
     try {
-      const context = {
-        userTrack: 'fullstack', // Could be passed as prop
-        skillLevel: 'beginner'
-      };
-
-      const searchResults = await aiService.semanticSearch(searchQuery, context);
-      setResults(searchResults);
-
-      // Save to recent searches
-      const updatedRecent = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 5);
-      setRecentSearches(updatedRecent);
-      localStorage.setItem('recentSearches', JSON.stringify(updatedRecent));
-    } catch (error) {
-      console.error('Search error:', error);
-      setResults([]);
+      const data = await apiService.aiSearch(q);
+      setResults(data.results || []);
+      setSuggested(data.suggestedTopics || []);
+    } catch (err) {
+      setError('Search failed. Please try again.');
+      console.error(err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
   };
 
-  const getResultIcon = (type: SearchResult['type']) => {
-    switch (type) {
-      case 'module': return <BookOpen className="h-4 w-4 text-green-600" />;
-      case 'track': return <Target className="h-4 w-4 text-blue-600" />;
-      case 'resource': return <ExternalLink className="h-4 w-4 text-orange-600" />;
-      case 'faq': return <HelpCircle className="h-4 w-4 text-purple-600" />;
-      default: return <Search className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getRelevanceColor = (score: number) => {
-    if (score >= 0.8) return 'bg-green-100 text-green-700';
-    if (score >= 0.6) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-gray-100 text-gray-700';
-  };
-
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text;
-    
-    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedQuery})`, 'gi');
-    const parts = text.split(regex);
-    
-    return (
-      <>
-        {parts.map((part, index) => 
-          new RegExp(`^${escapedQuery}$`, 'i').test(part) ? (
-            <mark key={index} className="bg-yellow-200 px-1 rounded">
-              {part}
-            </mark>
-          ) : part
-        )}
-      </>
-    );
-  };
+  const RELEVANCE_COLOR = (r: number) =>
+    r >= 0.8 ? 'bg-green-100 text-green-700' : r >= 0.5 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600';
 
   return (
-    <div ref={searchRef} className={`relative ${className}`}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyPress={handleKeyPress}
-          onFocus={() => setShowResults(true)}
-          placeholder={placeholder}
-          className="pl-10 pr-12"
-        />
-        <Button
-          onClick={() => handleSearch()}
-          disabled={!query.trim() || isLoading}
-          size="sm"
-          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8"
-        >
-          {isLoading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Search className="h-3 w-3" />
-          )}
-        </Button>
-      </div>
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <Search className="h-5 w-5 text-blue-500" />
+          Semantic Search
+          <Badge variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">
+            AI-Powered
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Search input */}
+        <div className="flex gap-2 mb-4">
+          <Input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder={`Search your ${user.track || 'track'} content…`}
+            className="flex-1 rounded-xl"
+          />
+          <Button onClick={handleSearch} disabled={!query.trim() || loading}
+            className="bg-blue-600 hover:bg-blue-700 rounded-xl px-4">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          </Button>
+        </div>
 
-      {showResults && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-96 overflow-hidden shadow-lg">
-          <CardContent className="p-0">
-            {/* Recent Searches */}
-            {!query && recentSearches.length > 0 && (
-              <div className="p-3 border-b">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Searches</h4>
-                <div className="flex flex-wrap gap-1">
-                  {recentSearches.map((search, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setQuery(search);
-                        handleSearch(search);
-                      }}
-                      className="text-xs h-6"
-                    >
-                      {search}
-                    </Button>
-                  ))}
+        {/* Error */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-3">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
+          </div>
+        )}
+
+        {/* Results */}
+        {!loading && searched && results.length === 0 && !error && (
+          <p className="text-center text-gray-500 text-sm py-4">No results found. Try a different search.</p>
+        )}
+
+        <div className="space-y-3">
+          {results.map((r, i) => (
+            <div key={i} className="p-3.5 rounded-xl border border-gray-100 bg-gray-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                  <h4 className="font-semibold text-sm text-gray-900">{r.title}</h4>
                 </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${RELEVANCE_COLOR(r.relevance)}`}>
+                  {Math.round(r.relevance * 100)}% match
+                </span>
               </div>
-            )}
-
-            {/* Search Results */}
-            {isLoading && (
-              <div className="p-4 text-center">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Searching...</p>
-              </div>
-            )}
-
-            {!isLoading && results.length === 0 && query && (
-              <div className="p-4 text-center">
-                <p className="text-sm text-gray-600">No results found for "{query}"</p>
-                <p className="text-xs text-gray-500 mt-1">Try different keywords or ask a question</p>
-              </div>
-            )}
-
-            {!isLoading && results.length > 0 && (
-              <div className="max-h-80 overflow-y-auto">
-                {results.map((result) => (
-                  <div
-                    key={result.id}
-                    onClick={() => {
-                      onResultClick?.(result);
-                      setShowResults(false);
-                    }}
-                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1">
-                        {getResultIcon(result.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-sm truncate">
-                            {highlightText(result.title, query)}
-                          </h4>
-                          <Badge className={`text-xs ${getRelevanceColor(result.relevanceScore)}`}>
-                            {(result.relevanceScore * 100).toFixed(0)}%
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-gray-600 line-clamp-2">
-                          {highlightText(result.content, query)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="text-xs">
-                            {result.type}
-                          </Badge>
-                          {result.metadata?.estimatedTime && (
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Clock className="h-3 w-3" />
-                              {result.metadata.estimatedTime} min
-                            </div>
-                          )}
-                          {result.metadata?.difficulty && (
-                            <Badge variant="outline" className="text-xs">
-                              {result.metadata.difficulty}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <p className="text-gray-600 text-xs leading-relaxed mb-2 ml-6">{r.description}</p>
+              <div className="flex flex-wrap gap-1.5 ml-6">
+                {r.tags.map(tag => (
+                  <span key={tag} className="text-[10px] px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-500">
+                    {tag}
+                  </span>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Suggested topics */}
+        {suggested.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> Related topics
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggested.map(s => (
+                <button key={s} onClick={() => { setQuery(s); }}
+                  className="text-xs px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-100 transition-colors">
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

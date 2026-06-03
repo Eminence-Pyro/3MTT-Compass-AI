@@ -4,43 +4,47 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
 import os
+import requests as http_requests
+import json
 from pymongo import MongoClient, errors
 from bson import ObjectId
 from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb+srv://Eminence_Pyro:SecurePass1234@cluster0.xpjtztj.mongodb.net/3mtt_compass?retryWrites=true&w=majority&appName=Cluster0')
 
-# MongoDB Atlas connection
+# ── Config — all from environment variables, NEVER hardcoded ──────────────────
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-in-production')
+MONGO_URI = os.environ.get('MONGO_URI')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+GROQ_MODEL = 'llama-3.3-70b-versatile'
+
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI environment variable is not set. Set it before starting the server.")
+
+# ── MongoDB ───────────────────────────────────────────────────────────────────
 try:
-    mongo_client = MongoClient(app.config['MONGO_URI'], tls=True)
-    # Always select the database explicitly for Atlas
+    mongo_client = MongoClient(MONGO_URI, tls=True, serverSelectionTimeoutMS=5000)
     db = mongo_client['3mtt_compass']
     users_collection = db['users']
     learning_paths_collection = db['learning_paths']
-    users_collection.create_index("email")
-
-    # Test connection
+    chat_sessions_collection = db['chat_sessions']
+    users_collection.create_index('email', unique=True)
     mongo_client.admin.command('ping')
-    print("MongoDB Atlas connection successful.")
+    print("✅ MongoDB Atlas connected.")
 except errors.ConnectionFailure as e:
-    print(f"MongoDB Atlas connection failed: {e}")
-    raise
-except Exception as e:
-    print(f"MongoDB error: {e}")
+    print(f"❌ MongoDB connection failed: {e}")
     raise
 
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# JWT Token decorator
+# ── JWT decorator ─────────────────────────────────────────────────────────────
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
+        token = request.headers.get('Authorization', '')
         if not token:
             return jsonify({'error': 'Token is missing'}), 401
-        
         try:
             if token.startswith('Bearer '):
                 token = token[7:]
@@ -51,220 +55,353 @@ def token_required(f):
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token has expired'}), 401
         except jwt.InvalidTokenError:
-            return jsonify({'error': 'Token is invalid'}), 401
-        except Exception as e:
-            return jsonify({'error': 'Invalid token format'}), 401
-        
+            return jsonify({'error': 'Invalid token'}), 401
         return f(current_user, *args, **kwargs)
     return decorated
 
-# Helper functions
-def user_to_dict(user):
-    if not user:
-        return None
-    
-    learning_path = learning_paths_collection.find_one({'user_id': str(user['_id'])})
-    
+# ── Helper: serialize user ────────────────────────────────────────────────────
+def serialize_user(u):
     return {
-        'id': str(user['_id']),
-        'email': user['email'],
-        'name': user['name'],
-        'track': user.get('track', ''),
-        'assessmentCompleted': user.get('assessment_completed', False),
-        'skillLevel': user.get('skill_level', 'beginner'),
-        'completedModules': user.get('completed_modules', []),
-        'achievements': user.get('achievements', []),
-        'totalPoints': user.get('total_points', 0),
-        'currentPath': learning_path_to_dict(learning_path) if learning_path else None,
-        'createdAt': user.get('created_at', datetime.utcnow()).isoformat(),
-        'updatedAt': user.get('updated_at', datetime.utcnow()).isoformat()
+        'id': str(u['_id']),
+        'name': u.get('name', ''),
+        'email': u.get('email', ''),
+        'track': u.get('track', ''),
+        'skillLevel': u.get('skillLevel', 'beginner'),
+        'assessmentCompleted': u.get('assessmentCompleted', False),
+        'completedModules': u.get('completedModules', []),
+        'totalPoints': u.get('totalPoints', 0),
+        'currentPath': u.get('currentPath', None),
+        'achievements': u.get('achievements', []),
+        'createdAt': u.get('createdAt', ''),
     }
 
-def learning_path_to_dict(path):
-    if not path:
-        return None
-    return {
-        'id': str(path['_id']),
-        'userId': path['user_id'],
-        'track': path['track'],
-        'modules': path['modules'],
-        'progress': path.get('progress', 0),
-        'adaptationHistory': path.get('adaptation_history', []),
-        'createdAt': path.get('created_at', datetime.utcnow()).isoformat()
-    }
+# ── Groq helper ───────────────────────────────────────────────────────────────
+def call_groq(messages, temperature=0.7, max_tokens=1024):
+    if not GROQ_API_KEY:
+        return None, "GROQ_API_KEY not configured on server."
+    try:
+        resp = http_requests.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={"model": GROQ_MODEL, "messages": messages, "temperature": temperature, "max_tokens": max_tokens},
+            timeout=30
+        )
+        resp.raise_for_status()
+        return resp.json()['choices'][0]['message']['content'], None
+    except Exception as e:
+        return None, str(e)
 
-# Routes
-@app.route('/api/register', methods=['POST'])
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTH ROUTES
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok', 'service': '3MTT Compass AI', 'groq': bool(GROQ_API_KEY)})
+
+@app.route('/register', methods=['POST'])
 def register():
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        name = data.get('name')
-        
-        if not email or not password or not name:
-            return jsonify({'error': 'Email, password, and name are required'}), 400
-        
-        # Check if user already exists
-        if users_collection.find_one({'email': email}):
-            return jsonify({'error': 'User already exists with this email'}), 400
-        
-        if len(password) < 6:
-            return jsonify({'error': 'Password must be at least 6 characters long'}), 400
-        
-        # Hash password
-        password_hash = generate_password_hash(password)
-        
-        # Create user document
-        user_doc = {
-            'email': email,
-            'password_hash': password_hash,
-            'name': name,
-            'track': '',
-            'assessment_completed': False,
-            'skill_level': 'beginner',
-            'completed_modules': [],
-            'achievements': [],
-            'total_points': 0,
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
-        }
-        
-        result = users_collection.insert_one(user_doc)
-        
-        return jsonify({
-            'message': 'User created successfully',
-            'user_id': str(result.inserted_id)
-        }), 201
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    data = request.get_json()
+    if not data or not all(k in data for k in ['email', 'password', 'name']):
+        return jsonify({'error': 'Email, password and name are required'}), 400
 
-@app.route('/api/login', methods=['POST'])
+    if users_collection.find_one({'email': data['email']}):
+        return jsonify({'error': 'Email already registered'}), 409
+
+    hashed = generate_password_hash(data['password'])
+    user = {
+        'name': data['name'],
+        'email': data['email'],
+        'password': hashed,
+        'track': '',
+        'skillLevel': 'beginner',
+        'assessmentCompleted': False,
+        'completedModules': [],
+        'totalPoints': 0,
+        'currentPath': None,
+        'achievements': [],
+        'createdAt': datetime.utcnow().isoformat(),
+    }
+    result = users_collection.insert_one(user)
+    token = jwt.encode(
+        {'user_id': str(result.inserted_id), 'exp': datetime.utcnow() + timedelta(days=7)},
+        app.config['SECRET_KEY'], algorithm='HS256'
+    )
+    return jsonify({'message': 'Registered successfully', 'token': token, 'user': serialize_user({**user, '_id': result.inserted_id})}), 201
+
+@app.route('/login', methods=['POST'])
 def login():
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        
-        if not email or not password:
-            return jsonify({'error': 'Email and password are required'}), 400
-        
-        user = users_collection.find_one({'email': email})
-        
-        if not user or not check_password_hash(user['password_hash'], password):
-            return jsonify({'error': 'Invalid login credentials'}), 401
-        
-        # Generate JWT token
-        token = jwt.encode({
-            'user_id': str(user['_id']),
-            'exp': datetime.utcnow() + timedelta(days=7)
-        }, app.config['SECRET_KEY'], algorithm='HS256')
-        
-        return jsonify({
-            'token': token,
-            'user': user_to_dict(user)
-        }), 200
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    data = request.get_json()
+    if not data or not all(k in data for k in ['email', 'password']):
+        return jsonify({'error': 'Email and password are required'}), 400
 
-@app.route('/api/user', methods=['GET'])
+    user = users_collection.find_one({'email': data['email']})
+    if not user or not check_password_hash(user['password'], data['password']):
+        return jsonify({'error': 'Invalid email or password'}), 401
+
+    token = jwt.encode(
+        {'user_id': str(user['_id']), 'exp': datetime.utcnow() + timedelta(days=7)},
+        app.config['SECRET_KEY'], algorithm='HS256'
+    )
+    return jsonify({'token': token, 'user': serialize_user(user)})
+
+@app.route('/user', methods=['GET'])
 @token_required
 def get_user(current_user):
-    return jsonify({'user': user_to_dict(current_user)}), 200
+    return jsonify({'user': serialize_user(current_user)})
 
-@app.route('/api/user', methods=['PUT'])
+@app.route('/user', methods=['PUT'])
 @token_required
 def update_user(current_user):
-    try:
-        data = request.get_json()
-        
-        # Prepare update data
-        update_data = {'updated_at': datetime.utcnow()}
-        
-        if 'track' in data:
-            update_data['track'] = data['track']
-        if 'assessmentCompleted' in data:
-            update_data['assessment_completed'] = data['assessmentCompleted']
-        if 'skillLevel' in data:
-            update_data['skill_level'] = data['skillLevel']
-        if 'completedModules' in data:
-            update_data['completed_modules'] = data['completedModules']
-        if 'achievements' in data:
-            update_data['achievements'] = data['achievements']
-        if 'totalPoints' in data:
-            update_data['total_points'] = data['totalPoints']
-        
-        # Update user
-        users_collection.update_one(
-            {'_id': current_user['_id']},
-            {'$set': update_data}
-        )
-        
-        # Handle learning path
-        if 'currentPath' in data and data['currentPath']:
-            path_data = data['currentPath']
-            
-            # Check if learning path exists
-            existing_path = learning_paths_collection.find_one({'user_id': str(current_user['_id'])})
-            
-            if existing_path:
-                # Update existing path
-                learning_paths_collection.update_one(
-                    {'_id': existing_path['_id']},
-                    {'$set': {
-                        'track': path_data['track'],
-                        'modules': path_data['modules'],
-                        'progress': path_data.get('progress', 0),
-                        'adaptation_history': path_data.get('adaptationHistory', []),
-                        'updated_at': datetime.utcnow()
-                    }}
-                )
-            else:
-                # Create new path
-                path_doc = {
-                    'user_id': str(current_user['_id']),
-                    'track': path_data['track'],
-                    'modules': path_data['modules'],
-                    'progress': path_data.get('progress', 0),
-                    'adaptation_history': path_data.get('adaptationHistory', []),
-                    'created_at': datetime.utcnow(),
-                    'updated_at': datetime.utcnow()
-                }
-                learning_paths_collection.insert_one(path_doc)
-        
-        # Get updated user
-        updated_user = users_collection.find_one({'_id': current_user['_id']})
-        return jsonify({'user': user_to_dict(updated_user)}), 200
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    data = request.get_json()
+    allowed = ['track', 'skillLevel', 'assessmentCompleted', 'completedModules',
+               'totalPoints', 'currentPath', 'achievements', 'name']
+    updates = {k: v for k, v in data.items() if k in allowed}
+    users_collection.update_one({'_id': current_user['_id']}, {'$set': updates})
+    updated = users_collection.find_one({'_id': current_user['_id']})
+    return jsonify({'user': serialize_user(updated)})
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    try:
-        # Test database connection
-        db.command('ping')
-        return jsonify({
-            'status': 'healthy',
-            'database': 'connected',
-            'timestamp': datetime.utcnow().isoformat()
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'database': 'disconnected',
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 500
+# ══════════════════════════════════════════════════════════════════════════════
+# AI ROUTES — powered by Groq Llama 3.3 70B
+# ══════════════════════════════════════════════════════════════════════════════
 
-@app.route('/', methods=['GET'])
-def index():
-    return jsonify({
-        'message': '3MTT Compass AI Backend is running. See /api/health for status.'
-    }), 200
+@app.route('/ai/chat', methods=['POST'])
+@token_required
+def ai_chat(current_user):
+    """Real AI chat — context-aware, knows the user's track, level, and progress."""
+    data = request.get_json()
+    message = data.get('message', '').strip()
+    history = data.get('history', [])  # [{role, content}, ...]
+
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+
+    track = current_user.get('track', 'general')
+    skill_level = current_user.get('skillLevel', 'beginner')
+    completed = len(current_user.get('completedModules', []))
+    name = current_user.get('name', 'Fellow')
+
+    system_prompt = f"""You are Compass AI, an intelligent learning assistant for the 3MTT (3 Million Technical Talent) Nigeria program.
+
+You are helping {name}, a {skill_level}-level learner on the {track} track who has completed {completed} modules so far.
+
+Your role:
+- Answer questions about their learning track and 3MTT program
+- Give personalized study advice based on their skill level
+- Recommend specific topics, resources, and next steps
+- Motivate and encourage them
+- Help troubleshoot technical concepts they're struggling with
+- Be warm, professional, and culturally aware (you're serving Nigerian learners)
+
+Keep responses concise, practical, and actionable. Use bullet points where helpful.
+If they ask about topics outside 3MTT or tech learning, gently redirect to their goals."""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    # Add recent history (last 10 exchanges)
+    for h in history[-10:]:
+        if h.get('role') in ('user', 'assistant') and h.get('content'):
+            messages.append({"role": h['role'], "content": h['content']})
+    messages.append({"role": "user", "content": message})
+
+    reply, err = call_groq(messages, temperature=0.7, max_tokens=800)
+    if err:
+        return jsonify({'error': f'AI service error: {err}'}), 503
+
+    # Save to chat history
+    chat_sessions_collection.insert_one({
+        'user_id': str(current_user['_id']),
+        'message': message,
+        'reply': reply,
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+    return jsonify({'reply': reply, 'role': 'assistant'})
+
+
+@app.route('/ai/recommend', methods=['POST'])
+@token_required
+def ai_recommend(current_user):
+    """AI-generated personalized learning recommendations."""
+    track = current_user.get('track', 'general')
+    skill_level = current_user.get('skillLevel', 'beginner')
+    completed = current_user.get('completedModules', [])
+    name = current_user.get('name', 'Fellow')
+
+    system_prompt = """You are Compass AI, a learning path advisor for the 3MTT Nigeria program.
+Return ONLY valid JSON — no markdown, no explanation, just the JSON object."""
+
+    user_prompt = f"""Generate 4 personalized learning recommendations for {name}.
+
+Track: {track}
+Skill Level: {skill_level}
+Completed modules: {len(completed)}
+Recent completed: {completed[-3:] if completed else []}
+
+Return this exact JSON structure:
+{{
+  "recommendations": [
+    {{
+      "id": "rec_1",
+      "type": "module",
+      "title": "string",
+      "description": "string (2 sentences)",
+      "reason": "string (why this is recommended for them)",
+      "estimatedTime": "string (e.g. 2 hours)",
+      "priority": "high|medium|low",
+      "actionLabel": "string"
+    }}
+  ]
+}}"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    reply, err = call_groq(messages, temperature=0.4, max_tokens=1200)
+    if err:
+        return jsonify({'error': f'AI service error: {err}'}), 503
+
+    try:
+        # Strip any accidental markdown fences
+        clean = reply.strip().lstrip('```json').lstrip('```').rstrip('```').strip()
+        data = json.loads(clean)
+        return jsonify(data)
+    except json.JSONDecodeError:
+        return jsonify({'error': 'AI returned malformed JSON', 'raw': reply}), 500
+
+
+@app.route('/ai/insights', methods=['POST'])
+@token_required
+def ai_insights(current_user):
+    """AI-generated learning insights and analytics summary."""
+    track = current_user.get('track', 'general')
+    skill_level = current_user.get('skillLevel', 'beginner')
+    completed = current_user.get('completedModules', [])
+    points = current_user.get('totalPoints', 0)
+    name = current_user.get('name', 'Fellow')
+
+    system_prompt = """You are Compass AI. Return ONLY valid JSON — no markdown."""
+
+    user_prompt = f"""Generate learning insights for {name}.
+
+Track: {track} | Level: {skill_level} | Modules done: {len(completed)} | Points: {points}
+
+Return this JSON:
+{{
+  "summary": "2-3 sentence overview of their progress",
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["area 1", "area 2"],
+  "nextMilestone": "string describing next achievement to unlock",
+  "motivationalMessage": "1 sentence, warm and encouraging",
+  "progressScore": <number 0-100>
+}}"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    reply, err = call_groq(messages, temperature=0.5, max_tokens=600)
+    if err:
+        return jsonify({'error': f'AI service error: {err}'}), 503
+
+    try:
+        clean = reply.strip().lstrip('```json').lstrip('```').rstrip('```').strip()
+        return jsonify(json.loads(clean))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'AI returned malformed JSON', 'raw': reply}), 500
+
+
+@app.route('/ai/analyze-assessment', methods=['POST'])
+@token_required
+def ai_analyze_assessment(current_user):
+    """AI analysis of assessment answers to determine skill level and path."""
+    data = request.get_json()
+    answers = data.get('answers', [])
+    questions = data.get('questions', [])
+    track = current_user.get('track', 'general')
+
+    system_prompt = """You are Compass AI. Analyze assessment results. Return ONLY valid JSON."""
+
+    user_prompt = f"""Analyze this 3MTT assessment for the {track} track.
+
+Questions and answers: {json.dumps(questions[:10])}
+Answer indices selected: {answers}
+
+Return:
+{{
+  "skillLevel": "beginner|intermediate|advanced",
+  "score": <0-100>,
+  "analysis": "2 sentence summary",
+  "recommendedPath": "beginner|standard|accelerated",
+  "keyGaps": ["gap 1", "gap 2"],
+  "strengths": ["strength 1"]
+}}"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    reply, err = call_groq(messages, temperature=0.3, max_tokens=500)
+    if err:
+        return jsonify({'error': f'AI service error: {err}'}), 503
+
+    try:
+        clean = reply.strip().lstrip('```json').lstrip('```').rstrip('```').strip()
+        return jsonify(json.loads(clean))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Malformed JSON from AI', 'raw': reply}), 500
+
+
+@app.route('/ai/search', methods=['POST'])
+@token_required
+def ai_search(current_user):
+    """Semantic search — AI finds relevant content based on natural language query."""
+    data = request.get_json()
+    query = data.get('query', '').strip()
+    track = current_user.get('track', 'general')
+
+    if not query:
+        return jsonify({'error': 'Query is required'}), 400
+
+    system_prompt = """You are Compass AI. Return ONLY valid JSON."""
+    user_prompt = f"""A 3MTT learner on the {track} track searched for: "{query}"
+
+Return relevant learning content as JSON:
+{{
+  "results": [
+    {{
+      "title": "string",
+      "description": "string",
+      "relevance": <0.0-1.0>,
+      "type": "module|resource|topic",
+      "tags": ["tag1", "tag2"]
+    }}
+  ],
+  "suggestedTopics": ["related topic 1", "related topic 2"]
+}}
+
+Return 3-5 relevant results."""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    reply, err = call_groq(messages, temperature=0.4, max_tokens=800)
+    if err:
+        return jsonify({'error': f'AI service error: {err}'}), 503
+
+    try:
+        clean = reply.strip().lstrip('```json').lstrip('```').rstrip('```').strip()
+        return jsonify(json.loads(clean))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Malformed JSON', 'raw': reply}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug)

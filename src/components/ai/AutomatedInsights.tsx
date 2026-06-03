@@ -1,260 +1,148 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { TrendingUp, TrendingDown, Minus, Brain, AlertTriangle, CheckCircle, Target, Lightbulb } from 'lucide-react';
-import { UserInsight } from '../../types/ai';
-import { aiService } from '../../services/aiService';
+import { Brain, RefreshCw, Loader2, AlertCircle, TrendingUp, Star, Target, Zap } from 'lucide-react';
 import { User } from '../../types/index';
+import { apiService } from '../../services/apiService';
+
+interface Insights {
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  nextMilestone: string;
+  motivationalMessage: string;
+  progressScore: number;
+}
 
 interface AutomatedInsightsProps {
   user: User;
-  refreshTrigger?: number;
+  refreshKey?: number;
 }
 
-const AutomatedInsights: React.FC<AutomatedInsightsProps> = ({ user, refreshTrigger = 0 }) => {
-  const [insights, setInsights] = useState<UserInsight[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expandedInsights, setExpandedInsights] = useState<string[]>([]);
+const AutomatedInsights: React.FC<AutomatedInsightsProps> = ({ user, refreshKey }) => {
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
 
-  useEffect(() => {
-    loadInsights();
-  }, [user.completedModules.length, user.skillLevel, refreshTrigger, loadInsights]);
+  useEffect(() => { loadInsights(); }, [user.completedModules?.length, refreshKey]);
 
   const loadInsights = async () => {
     setLoading(true);
+    setError('');
     try {
-      const activityData = {
-        sessionCount: 15,
-        averageSessionTime: 45,
-        lastActiveDate: new Date().toISOString(),
-        strugglingTopics: [],
-        strongTopics: user.completedModules.slice(0, 3)
-      };
-
-      const generatedInsights = await aiService.generateInsights(user, activityData);
-      setInsights(generatedInsights);
-    } catch (error) {
-      console.error('Error loading insights:', error);
+      const data = await apiService.aiInsights();
+      setInsights(data);
+    } catch (err) {
+      setError('Could not generate insights. Try refreshing.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getTrendIcon = (trend?: 'up' | 'down' | 'stable') => {
-    switch (trend) {
-      case 'up': return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'down': return <TrendingDown className="h-4 w-4 text-red-600" />;
-      case 'stable': return <Minus className="h-4 w-4 text-gray-600" />;
-      default: return null;
-    }
-  };
+  const scoreColor = (s: number) =>
+    s >= 70 ? 'text-green-600' : s >= 40 ? 'text-yellow-600' : 'text-red-500';
 
-  const getPriorityColor = (priority: UserInsight['priority']) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
-  const getInsightIcon = (type: UserInsight['type']) => {
-    switch (type) {
-      case 'progress': return <Target className="h-5 w-5 text-blue-600" />;
-      case 'performance': return <TrendingUp className="h-5 w-5 text-green-600" />;
-      case 'recommendation': return <Lightbulb className="h-5 w-5 text-orange-600" />;
-      case 'prediction': return <Brain className="h-5 w-5 text-purple-600" />;
-      default: return <CheckCircle className="h-5 w-5 text-gray-600" />;
-    }
-  };
-
-  const toggleExpanded = (insightId: string) => {
-    setExpandedInsights(prev => 
-      prev.includes(insightId) 
-        ? prev.filter(id => id !== insightId)
-        : [...prev, insightId]
-    );
-  };
-
-  const getActionableInsights = () => insights.filter(insight => insight.actionable);
-  const getHighPriorityInsights = () => insights.filter(insight => insight.priority === 'high');
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-600" />
-            AI Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const scoreBg = (s: number) =>
+    s >= 70 ? 'bg-green-100' : s >= 40 ? 'bg-yellow-100' : 'bg-red-100';
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-600 font-medium">Total Insights</p>
-                <p className="text-2xl font-bold text-blue-700">{insights.length}</p>
-              </div>
-              <Brain className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Brain className="h-5 w-5 text-purple-500" />
+            AI Learning Insights
+          </CardTitle>
+          <Button variant="ghost" size="icon" onClick={loadInsights} disabled={loading} className="h-8 w-8">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </CardHeader>
 
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-orange-600 font-medium">Action Required</p>
-                <p className="text-2xl font-bold text-orange-700">{getActionableInsights().length}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-red-600 font-medium">High Priority</p>
-                <p className="text-2xl font-bold text-red-700">{getHighPriorityInsights().length}</p>
-              </div>
-              <Target className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Insights List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-600" />
-              Personalized Insights
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadInsights}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
+      <CardContent>
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-8 text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+            <span className="text-sm">Analysing your learning journey…</span>
           </div>
-        </CardHeader>
-        <CardContent>
-          {insights.length === 0 ? (
-            <div className="text-center py-8">
-              <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No insights available yet.</p>
-              <p className="text-sm text-gray-500">Complete more modules to unlock AI insights!</p>
+        )}
+
+        {error && !loading && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
+            <Button variant="ghost" size="sm" onClick={loadInsights} className="ml-auto text-red-600 h-7">Retry</Button>
+          </div>
+        )}
+
+        {insights && !loading && (
+          <div className="space-y-4">
+            {/* Progress score */}
+            <div className={`flex items-center gap-3 p-4 rounded-xl ${scoreBg(insights.progressScore)}`}>
+              <div className={`text-3xl font-black ${scoreColor(insights.progressScore)}`}>
+                {insights.progressScore}
+              </div>
+              <div>
+                <p className={`font-semibold text-sm ${scoreColor(insights.progressScore)}`}>Progress Score</p>
+                <p className="text-gray-600 text-xs">out of 100</p>
+              </div>
+              <TrendingUp className={`h-6 w-6 ml-auto ${scoreColor(insights.progressScore)}`} />
             </div>
-          ) : (
-            <div className="space-y-4">
-              {insights.map((insight) => (
-                <div
-                  key={insight.id}
-                  className={`border rounded-lg p-4 ${getPriorityColor(insight.priority)}`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      {getInsightIcon(insight.type)}
-                      <div>
-                        <h4 className="font-medium">{insight.title}</h4>
-                        <p className="text-sm opacity-80">{insight.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getTrendIcon(insight.trend)}
-                      <Badge variant="outline" className="text-xs">
-                        {insight.type}
-                      </Badge>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-lg font-semibold">
-                        {insight.value}
-                      </div>
-                      <Badge className={`text-xs ${getPriorityColor(insight.priority)}`}>
-                        {insight.priority} priority
-                      </Badge>
-                      {insight.actionable && (
-                        <Badge className="text-xs bg-blue-100 text-blue-700">
-                          Action Required
-                        </Badge>
-                      )}
-                    </div>
-
-                    {insight.actionable && (
-                      <Button
-                        size="sm"
-                        onClick={() => toggleExpanded(insight.id)}
-                        variant="outline"
-                      >
-                        {expandedInsights.includes(insight.id) ? 'Hide' : 'View'} Actions
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Expanded Actions */}
-                  {expandedInsights.includes(insight.id) && insight.actionable && (
-                    <div className="mt-4 p-3 bg-white/50 rounded border">
-                      <h5 className="font-medium mb-2">Recommended Actions:</h5>
-                      <ul className="text-sm space-y-1">
-                        {insight.type === 'recommendation' && (
-                          <>
-                            <li>• Retake the skill assessment to unlock new content</li>
-                            <li>• Review completed modules for better understanding</li>
-                            <li>• Consider switching to intermediate difficulty</li>
-                          </>
-                        )}
-                        {insight.type === 'progress' && insight.priority === 'high' && (
-                          <>
-                            <li>• Set daily learning goals to improve consistency</li>
-                            <li>• Join study groups or find a learning partner</li>
-                            <li>• Break down complex modules into smaller sessions</li>
-                          </>
-                        )}
-                        {insight.type === 'performance' && (
-                          <>
-                            <li>• Continue with your current learning pace</li>
-                            <li>• Consider taking on more challenging projects</li>
-                            <li>• Share your progress with the community</li>
-                          </>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
+            {/* Summary */}
+            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
+              <p className="text-gray-700 text-sm leading-relaxed">{insights.summary}</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+
+            {/* Strengths */}
+            {insights.strengths?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5 text-yellow-500" /> Strengths
+                </p>
+                <ul className="space-y-1.5">
+                  {insights.strengths.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="text-green-500 font-bold mt-0.5">✓</span> {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Improvements */}
+            {insights.improvements?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Target className="h-3.5 w-3.5 text-blue-500" /> Areas to Improve
+                </p>
+                <ul className="space-y-1.5">
+                  {insights.improvements.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="text-blue-500 font-bold mt-0.5">→</span> {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Next milestone */}
+            <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-100 flex items-start gap-2">
+              <Zap className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-purple-700 mb-0.5">Next Milestone</p>
+                <p className="text-purple-700 text-sm">{insights.nextMilestone}</p>
+              </div>
+            </div>
+
+            {/* Motivational message */}
+            <div className="p-3 rounded-xl bg-green-50 border border-green-100 text-center">
+              <p className="text-green-700 text-sm font-medium italic">"{insights.motivationalMessage}"</p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

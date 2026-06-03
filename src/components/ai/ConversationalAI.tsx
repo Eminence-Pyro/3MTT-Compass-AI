@@ -1,13 +1,20 @@
+"use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Send, Bot, User, Minimize2, Maximize2, X } from 'lucide-react';
-import { AIMessage, ChatSession } from '../../types/ai';
-import { aiService } from '../../services/aiService';
+import { MessageCircle, Send, Bot, User, Minimize2, Maximize2, X, Loader2, AlertCircle } from 'lucide-react';
 import { User as AppUser } from '../../types/index';
+import { apiService } from '../../services/apiService';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  error?: boolean;
+}
 
 interface ConversationalAIProps {
   user: AppUser;
@@ -17,174 +24,150 @@ interface ConversationalAIProps {
 }
 
 const ConversationalAI: React.FC<ConversationalAIProps> = ({ user, isOpen, onToggle, onClose }) => {
-  const [messages, setMessages] = useState<AIMessage[]>([
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: `Hello ${user.name}! I'm your AI learning assistant. I can help you with onboarding, answer questions about your ${user.track} track, and provide personalized guidance. How can I assist you today?`,
+      content: `Hi ${user.name}! 👋 I'm Compass AI, your personal learning assistant for the 3MTT program.\n\nI know you're on the **${user.track || 'your selected'}** track. Ask me anything — study tips, concept explanations, next steps, or just how to stay motivated. I'm here to help!`,
       timestamp: new Date().toISOString(),
-      metadata: { type: 'onboarding', confidence: 1.0 }
     }
   ]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [inputMessage, setInputMessage]   = useState('');
+  const [isLoading, setIsLoading]         = useState(false);
+  const [isMinimized, setIsMinimized]     = useState(false);
+  const messagesEndRef                    = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+  const getHistory = () =>
+    messages
+      .filter(m => m.id !== 'welcome' && !m.error)
+      .map(m => ({ role: m.role, content: m.content }));
 
-    const userMessage: AIMessage = {
-      id: `msg_${Date.now()}`,
+  const handleSend = async () => {
+    const text = inputMessage.trim();
+    if (!text || isLoading) return;
+
+    const userMsg: Message = {
+      id: `u_${Date.now()}`,
       role: 'user',
-      content: inputMessage,
-      timestamp: new Date().toISOString()
+      content: text,
+      timestamp: new Date().toISOString(),
     };
-
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMsg]);
     setInputMessage('');
     setIsLoading(true);
 
     try {
-      const context = {
-        currentTrack: user.track,
-        skillLevel: user.skillLevel,
-        completedModules: user.completedModules.length,
-        recentActivity: user.completedModules.slice(-3)
-      };
-
-      const aiResponse = await aiService.sendMessage('session_1', inputMessage, context);
-      setMessages(prev => [...prev, aiResponse]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: AIMessage = {
-        id: `error_${Date.now()}`,
+      const data = await apiService.aiChat(text, getHistory());
+      setMessages(prev => [...prev, {
+        id: `a_${Date.now()}`,
         role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again or contact support if the issue persists.',
+        content: data.reply,
         timestamp: new Date().toISOString(),
-        metadata: { type: 'faq', confidence: 1.0 }
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        id: `err_${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I had trouble connecting. Please try again in a moment.',
+        timestamp: new Date().toISOString(),
+        error: true,
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
-  const getMessageTypeColor = (type?: string) => {
-    switch (type) {
-      case 'onboarding': return 'bg-green-100 text-green-700';
-      case 'guidance': return 'bg-blue-100 text-blue-700';
-      case 'faq': return 'bg-orange-100 text-orange-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
+  // Quick prompt chips
+  const quickPrompts = [
+    'What should I study next?',
+    `Explain a key concept in ${user.track || 'my track'}`,
+    'How do I stay motivated?',
+    'Tips for completing modules faster',
+  ];
 
   if (!isOpen) {
     return (
-      <Button
+      <button
         onClick={onToggle}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-green-600 hover:bg-green-700 shadow-lg z-50"
-        size="icon"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110"
+        title="Open Compass AI"
       >
         <MessageCircle className="h-6 w-6" />
-      </Button>
+      </button>
     );
   }
 
   return (
-    <Card className={`fixed bottom-6 right-6 w-96 shadow-xl z-50 transition-all duration-300 ${
-      isMinimized ? 'h-16' : 'h-[500px]'
-    }`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-green-600 text-white rounded-t-lg">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Bot className="h-5 w-5" />
-          AI Assistant
-        </CardTitle>
+    <div className={`fixed bottom-6 right-6 z-50 w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ${isMinimized ? 'h-16' : 'h-[560px]'}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-green-600 rounded-t-2xl flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+            <Bot className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <p className="text-white font-semibold text-sm">Compass AI</p>
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
+              <span className="text-green-200 text-xs">Powered by Groq Llama 3.3</span>
+            </div>
+          </div>
+        </div>
         <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="text-white hover:bg-green-700 h-8 w-8 p-0"
-          >
-            {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+          <Button variant="ghost" size="icon" className="w-7 h-7 text-white hover:bg-white/20"
+            onClick={() => setIsMinimized(!isMinimized)}>
+            {isMinimized ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-white hover:bg-green-700 h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="w-7 h-7 text-white hover:bg-white/20" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
-      </CardHeader>
+      </div>
 
       {!isMinimized && (
-        <CardContent className="flex flex-col h-full p-0">
+        <>
+          {/* Messages */}
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      {message.role === 'assistant' ? (
-                        <Bot className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <User className="h-4 w-4 text-blue-600" />
-                      )}
-                      <span className="text-xs text-gray-500">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </span>
-                      {message.metadata?.type && (
-                        <Badge className={`text-xs ${getMessageTypeColor(message.metadata.type)}`}>
-                          {message.metadata.type}
-                        </Badge>
-                      )}
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {msg.error ? <AlertCircle className="h-4 w-4 text-red-500" /> : <Bot className="h-4 w-4 text-green-600" />}
                     </div>
-                    <div
-                      className={`p-3 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      {message.metadata?.confidence && (
-                        <div className="text-xs opacity-70 mt-1">
-                          Confidence: {(message.metadata.confidence * 100).toFixed(0)}%
-                        </div>
-                      )}
-                    </div>
+                  )}
+                  <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                    msg.role === 'user'
+                      ? 'bg-green-600 text-white rounded-br-sm'
+                      : msg.error
+                        ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-sm'
+                  }`}>
+                    {msg.content}
                   </div>
+                  {msg.role === 'user' && (
+                    <div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                  )}
                 </div>
               ))}
               {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 p-3 rounded-lg">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
+                <div className="flex gap-2.5 justify-start">
+                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                    <span className="text-gray-500 text-sm">Compass AI is thinking…</span>
                   </div>
                 </div>
               )}
@@ -192,32 +175,37 @@ const ConversationalAI: React.FC<ConversationalAIProps> = ({ user, isOpen, onTog
             </div>
           </ScrollArea>
 
-          <div className="p-4 border-t">
-            <div className="flex gap-2">
-              <Input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask me anything about your learning journey..."
-                disabled={isLoading}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isLoading}
-                size="icon"
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+          {/* Quick prompts — only show if 1 message (welcome only) */}
+          {messages.length === 1 && (
+            <div className="px-4 pb-2 flex gap-2 flex-wrap">
+              {quickPrompts.map(p => (
+                <button key={p}
+                  onClick={() => { setInputMessage(p); }}
+                  className="text-xs px-3 py-1.5 rounded-full border border-green-200 text-green-700 hover:bg-green-50 transition-colors">
+                  {p}
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Press Enter to send, Shift+Enter for new line
-            </p>
+          )}
+
+          {/* Input */}
+          <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-2 flex-shrink-0">
+            <Input
+              value={inputMessage}
+              onChange={e => setInputMessage(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="Ask Compass AI anything…"
+              disabled={isLoading}
+              className="flex-1 text-sm rounded-xl border-gray-200"
+            />
+            <Button onClick={handleSend} disabled={!inputMessage.trim() || isLoading}
+              className="bg-green-600 hover:bg-green-700 rounded-xl px-3">
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
-        </CardContent>
+        </>
       )}
-    </Card>
+    </div>
   );
 };
 
